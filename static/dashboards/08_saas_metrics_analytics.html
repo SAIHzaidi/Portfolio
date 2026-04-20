@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaaS Metrics Analytics · MRR, Churn & Unit Economics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06070d;--s1:#0c0e1a;--s2:#111428;--lift:#161932;
+  --border:#1c2040;--border2:#242850;
+  --indigo:#6366f1;--violet:#8b5cf6;--lime:#84cc16;--cyan:#22d3ee;--pink:#ec4899;--amber:#f59e0b;
+  --text:#f1f5f9;--muted:#64748b;--dim:#1e2545;
+  --font:'Manrope',system-ui,sans-serif;
+  --mono:'Fira Code',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 1400px 600px at 30% 0%,rgba(99,102,241,.06),transparent),
+             radial-gradient(ellipse 800px 400px at 80% 100%,rgba(132,204,22,.04),transparent);}
+
+/* TABLEAU HEADER */
+.t-header{
+  background:var(--s1);border-bottom:2px solid var(--indigo);
+  padding:20px 32px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:24px;
+  position:relative;z-index:10;
+}
+.t-logo{display:flex;align-items:center;gap:12px}
+.t-logo-mark{width:36px;height:36px;background:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:white;letter-spacing:-1px}
+.t-logo-text{font-size:12px;font-weight:800;color:var(--text);letter-spacing:2px;text-transform:uppercase}
+.t-logo-sub{font-size:9px;color:var(--muted);letter-spacing:1px}
+.t-title h1{font-size:clamp(18px,2.5vw,26px);font-weight:800;color:var(--text);letter-spacing:-.5px}
+.t-title p{font-size:11px;color:var(--muted);margin-top:4px}
+.t-meta{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.t-tag{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:2px}
+.t-tag-i{background:rgba(99,102,241,.2);color:var(--indigo);border:1px solid rgba(99,102,241,.3)}
+.t-tag-l{background:rgba(132,204,22,.15);color:var(--lime);border:1px solid rgba(132,204,22,.3)}
+
+/* NAV PILLS */
+.nav{padding:0 32px;background:var(--s1);border-bottom:1px solid var(--border);display:flex;gap:2px;position:relative;z-index:10}
+.nav-item{padding:10px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s}
+.nav-item.active{color:var(--indigo);border-bottom-color:var(--indigo)}
+
+/* PAGE */
+.page{max-width:1380px;margin:0 auto;padding:20px 32px;display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
+
+/* MRR HERO */
+.mrr-hero{
+  display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;
+  gap:0;border:1px solid var(--border);overflow:hidden;
+}
+.mrr-cell{
+  padding:20px 22px;border-right:1px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.mrr-cell:last-child{border-right:none}
+.mrr-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mrr-cell.i::before{background:var(--indigo)}.mrr-cell.l::before{background:var(--lime)}.mrr-cell.c::before{background:var(--cyan)}.mrr-cell.p::before{background:var(--pink)}.mrr-cell.a::before{background:var(--amber)}
+.mrr-label{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:10px}
+.mrr-val{font-size:30px;font-weight:800;line-height:1}
+.mrr-val.i{color:var(--indigo)}.mrr-val.l{color:var(--lime)}.mrr-val.c{color:var(--cyan)}.mrr-val.p{color:var(--pink)}.mrr-val.a{color:var(--amber)}
+.mrr-delta{font-size:11px;font-weight:700;margin-top:7px}
+.pos{color:var(--lime)}.neg{color:var(--pink)}.neu{color:var(--muted)}
+.mrr-sub{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* GRIDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid-32{display:grid;grid-template-columns:3fr 2fr;gap:14px}
+.grid-12{display:grid;grid-template-columns:1fr 2fr;gap:14px}
+
+/* VIS */
+.vis{background:var(--s1);border:1px solid var(--border);overflow:hidden}
+.vis-head{
+  padding:12px 18px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:flex-start;
+  background:var(--s2);
+}
+.vis-title{font-size:13px;font-weight:700;color:var(--text)}
+.vis-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.vis-body{padding:16px 18px}
+.ch-h{height:220px;position:relative}
+.ch-h.tall{height:280px}
+.ch-h.sm{height:160px}
+
+/* COHORT TABLE */
+.cohort-wrap{overflow-x:auto}
+.cohort-table{border-collapse:collapse;width:100%;min-width:600px;font-size:11px}
+.cohort-table th{padding:7px 10px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border2);text-align:center;font-weight:700;white-space:nowrap}
+.cohort-table th:first-child{text-align:left}
+.cohort-table td{padding:7px 10px;border-bottom:1px solid rgba(28,32,64,.6);text-align:center}
+.cohort-table td:first-child{text-align:left;font-weight:700;font-size:10px}
+.cohort-table td:hover{position:relative;z-index:2}
+
+/* CODE */
+.sql{background:#04050c;padding:18px 20px;font-family:var(--mono);font-size:11px;line-height:1.9;overflow-x:auto;white-space:pre;border-left:2px solid var(--indigo)}
+.sk{color:var(--indigo);font-weight:bold}.sf{color:var(--cyan)}.ss{color:var(--lime)}.sc{color:#2a3060;font-style:italic}.sn{color:var(--amber)}
+
+/* UNIT ECON */
+.ue-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+.ue-item{background:var(--lift);border:1px solid var(--border2);padding:16px;text-align:center}
+.ue-val{font-size:26px;font-weight:800;margin-bottom:4px}
+.ue-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+.ue-delta{font-size:10px;font-weight:700;margin-top:5px}
+
+/* MRR WATERFALL */
+.wf-item{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.wf-lbl{font-size:10px;color:var(--muted);width:110px;flex-shrink:0}
+.wf-bar-area{flex:1;height:20px;position:relative}
+.wf-b{position:absolute;height:100%;border-radius:2px;display:flex;align-items:center;padding:0 8px;transition:width 1s}
+.wf-b span{font-size:10px;font-weight:700;color:white;white-space:nowrap}
+.wf-num{font-size:11px;font-weight:700;width:60px;text-align:right}
+
+/* INSIGHT */
+.insight{border-left:2px solid var(--indigo);padding:12px 14px;background:rgba(99,102,241,.06);margin-top:12px}
+.insight h4{font-size:13px;font-weight:700;color:var(--indigo);margin-bottom:5px}
+.insight p{font-size:11px;color:var(--muted);line-height:1.7}
+
+/* PLAN MIX */
+.plan-bar{display:flex;height:28px;border-radius:3px;overflow:hidden;margin:12px 0}
+.plan-seg{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;transition:width 1s}
+
+.footer{border-top:1px solid var(--border);padding:14px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:var(--s1);position:relative;z-index:1}
+.footer p{font-size:10px;color:var(--muted)}
+.footer-nav{display:flex;gap:8px}
+.footer-nav a{font-size:10px;color:var(--indigo);text-decoration:none;border:1px solid rgba(99,102,241,.35);padding:6px 12px;transition:background .15s}
+.footer-nav a:hover{background:rgba(99,102,241,.1)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.mrr-hero,.vis,.grid-2,.grid-3,.grid-32,.grid-12{animation:fadeUp .5s ease both}
+</style>
+</head>
+<body>
+
+<header class="t-header">
+  <div class="t-logo">
+    <div class="t-logo-mark">T</div>
+    <div><div class="t-logo-text">Tableau</div><div class="t-logo-sub">Desktop · Public</div></div>
+  </div>
+  <div class="t-title">
+    <h1>SaaS Metrics · MRR, Churn & Unit Economics</h1>
+    <p>B2B SaaS · £2.1M ARR · 3 pricing tiers · 840 accounts · Stripe + Segment + Snowflake</p>
+  </div>
+  <div class="t-meta">
+    <span class="t-tag t-tag-i">Case Study 08 / 09</span>
+    <span class="t-tag t-tag-l">Tools: SQL · Python · Tableau</span>
+  </div>
+</header>
+
+<div class="nav">
+  <div class="nav-item active">MRR Overview</div>
+  <div class="nav-item">Churn Deep Dive</div>
+  <div class="nav-item">Cohort Analysis</div>
+  <div class="nav-item">Unit Economics</div>
+</div>
+
+<main class="page">
+
+  <!-- MRR HERO STRIP -->
+  <div class="mrr-hero">
+    <div class="mrr-cell i"><div class="mrr-label">MRR</div><div class="mrr-val i">£174.8K</div><div class="mrr-delta pos">↑ 4.2% MoM</div><div class="mrr-sub">ARR: £2.1M</div></div>
+    <div class="mrr-cell l"><div class="mrr-label">Net New MRR</div><div class="mrr-val l">+£7.2K</div><div class="mrr-delta pos">↑ vs £4.8K prior mo</div><div class="mrr-sub">New + Expansion − Churn</div></div>
+    <div class="mrr-cell c"><div class="mrr-label">Net Revenue Retention</div><div class="mrr-val c">112%</div><div class="mrr-delta pos">↑ 3pp vs Q2</div><div class="mrr-sub">Target: 110%+</div></div>
+    <div class="mrr-cell p"><div class="mrr-label">Gross Churn</div><div class="mrr-val p">3.1%</div><div class="mrr-delta pos">↓ 0.4pp MoM</div><div class="mrr-sub">Monthly · voluntary only</div></div>
+    <div class="mrr-cell a"><div class="mrr-label">LTV:CAC</div><div class="mrr-val a">4.8×</div><div class="mrr-delta pos">↑ 0.6× vs LY</div><div class="mrr-sub">Target: 3×+</div></div>
+  </div>
+
+  <!-- MRR WATERFALL + TREND -->
+  <div class="grid-32">
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">MRR Growth — 12-Month Trend with Components</div><div class="vis-sub">New · Expansion · Contraction · Churn · Net New stacked</div></div></div>
+      <div class="vis-body"><div class="ch-h tall"><canvas id="mrrChart"></canvas></div></div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">MRR Waterfall — Current Month</div><div class="vis-sub">Opening → closing MRR movement</div></div></div>
+      <div class="vis-body">
+        <div id="mrrWf" style="margin-top:8px"></div>
+        <div style="margin-top:20px">
+          <div class="mrr-label" style="margin-bottom:10px">MRR Mix by Plan</div>
+          <div class="plan-bar" id="planBar"></div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;background:var(--indigo);border-radius:1px"></div><span style="font-size:10px;color:var(--muted)">Starter 18%</span></div>
+            <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;background:var(--cyan);border-radius:1px"></div><span style="font-size:10px;color:var(--muted)">Pro 44%</span></div>
+            <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;background:var(--lime);border-radius:1px"></div><span style="font-size:10px;color:var(--muted)">Enterprise 38%</span></div>
+          </div>
+        </div>
+        <div class="insight" style="margin-top:16px">
+          <h4>Expansion MRR outpacing New MRR</h4>
+          <p>Expansion MRR is now 62% of gross new MRR — a signal that the product has strong land-and-expand dynamics. Focus shifting to: (1) shortening time-to-expansion and (2) increasing Enterprise attach rate at initial sale.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COHORT + SQL -->
+  <div class="grid-12">
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">The SQL — MRR Movement</div><div class="vis-sub">Stripe → Snowflake · categorises every subscription event</div></div></div>
+      <div class="sql"><span class="sc">-- MRR movement categorisation</span>
+<span class="sc">-- Classifies each subscription change into</span>
+<span class="sc">-- New / Expansion / Contraction / Churn / Reactivation</span>
+
+<span class="sk">WITH</span> monthly_mrr <span class="sk">AS</span> (
+  <span class="sk">SELECT</span>
+    customer_id,
+    <span class="sf">DATE_TRUNC</span>(<span class="ss">'month'</span>, period_start) <span class="sk">AS</span> month,
+    <span class="sf">SUM</span>(amount) / <span class="sn">100.0</span>              <span class="sk">AS</span> mrr
+  <span class="sk">FROM</span> stripe.invoice_line_items
+  <span class="sk">WHERE</span> status = <span class="ss">'paid'</span>
+  <span class="sk">GROUP BY</span> <span class="sn">1</span>,<span class="sn">2</span>
+),
+mrr_movement <span class="sk">AS</span> (
+  <span class="sk">SELECT</span>
+    curr.customer_id,
+    curr.month,
+    curr.mrr                          <span class="sk">AS</span> current_mrr,
+    prev.mrr                          <span class="sk">AS</span> prior_mrr,
+    curr.mrr - <span class="sf">COALESCE</span>(prev.mrr,<span class="sn">0</span>) <span class="sk">AS</span> delta,
+    <span class="sk">CASE</span>
+      <span class="sk">WHEN</span> prev.mrr <span class="sk">IS NULL</span>
+           <span class="sk">THEN</span> <span class="ss">'new'</span>
+      <span class="sk">WHEN</span> curr.mrr = <span class="sn">0</span>
+           <span class="sk">AND</span> prev.mrr > <span class="sn">0</span>
+           <span class="sk">THEN</span> <span class="ss">'churn'</span>
+      <span class="sk">WHEN</span> curr.mrr > prev.mrr
+           <span class="sk">THEN</span> <span class="ss">'expansion'</span>
+      <span class="sk">WHEN</span> curr.mrr &lt; prev.mrr
+           <span class="sk">AND</span> curr.mrr > <span class="sn">0</span>
+           <span class="sk">THEN</span> <span class="ss">'contraction'</span>
+      <span class="sk">ELSE</span> <span class="ss">'flat'</span>
+    <span class="sk">END</span>                               <span class="sk">AS</span> movement_type
+  <span class="sk">FROM</span> monthly_mrr curr
+  <span class="sk">LEFT JOIN</span> monthly_mrr prev
+         <span class="sk">ON</span> curr.customer_id = prev.customer_id
+        <span class="sk">AND</span> prev.month = <span class="sf">DATE_TRUNC</span>(<span class="ss">'month'</span>,
+              <span class="sf">DATEADD</span>(<span class="ss">'month'</span>, <span class="sn">-1</span>, curr.month))
+)
+<span class="sk">SELECT</span>
+  month,
+  movement_type,
+  <span class="sf">COUNT</span>(DISTINCT customer_id) <span class="sk">AS</span> accounts,
+  <span class="sf">ROUND</span>(<span class="sf">SUM</span>(delta), <span class="sn">2</span>)        <span class="sk">AS</span> mrr_impact
+<span class="sk">FROM</span> mrr_movement
+<span class="sk">WHERE</span> movement_type != <span class="ss">'flat'</span>
+<span class="sk">GROUP BY</span> <span class="sn">1</span>,<span class="sn">2</span>
+<span class="sk">ORDER BY</span> month, movement_type</div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">Revenue Retention Cohort Matrix</div><div class="vis-sub">% of original MRR retained by month · cohort = signup month</div></div></div>
+      <div class="vis-body" style="padding:12px 14px">
+        <div class="cohort-wrap"><table class="cohort-table" id="cohortTable"></table></div>
+        <div class="insight">
+          <h4>Enterprise cohorts retain 130%+ by Month 6</h4>
+          <p>Enterprise accounts consistently expand beyond their initial contract value within 6 months. Land-and-expand motion is working — the opportunity is to identify the Starter and Pro accounts that exhibit early enterprise-like behaviour and route to Enterprise AEs.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UNIT ECONOMICS -->
+  <div class="grid-2">
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">Unit Economics by Plan Tier</div><div class="vis-sub">CAC · LTV · Payback period · LTV:CAC ratio</div></div></div>
+      <div class="vis-body">
+        <div class="ue-grid">
+          <div class="ue-item"><div class="ue-val" style="color:var(--indigo)">£840</div><div class="ue-lbl">Blended CAC</div><div class="ue-delta pos">↓ £120 vs LY</div></div>
+          <div class="ue-item"><div class="ue-val" style="color:var(--lime)">£4,020</div><div class="ue-lbl">Blended LTV</div><div class="ue-delta pos">↑ £380 vs LY</div></div>
+          <div class="ue-item"><div class="ue-val" style="color:var(--cyan)">4.8×</div><div class="ue-lbl">LTV:CAC</div><div class="ue-delta pos">Target: 3×+</div></div>
+          <div class="ue-item"><div class="ue-val" style="color:var(--amber)">5.8 mo</div><div class="ue-lbl">CAC Payback</div><div class="ue-delta pos">↓ 1.2mo vs LY</div></div>
+          <div class="ue-item"><div class="ue-val" style="color:var(--pink)">3.1%</div><div class="ue-lbl">Monthly Churn</div><div class="ue-delta pos">↓ 0.4pp MoM</div></div>
+          <div class="ue-item"><div class="ue-val" style="color:var(--lime)">112%</div><div class="ue-lbl">NRR</div><div class="ue-delta pos">↑ 3pp vs Q2</div></div>
+        </div>
+        <div class="ch-h" style="margin-top:16px"><canvas id="ltvcacChart"></canvas></div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">Churn Analysis — by Reason & Segment</div><div class="vis-sub">Exit survey data · n=142 churned accounts · last 12 months</div></div></div>
+      <div class="vis-body">
+        <div class="ch-h tall"><canvas id="churnChart"></canvas></div>
+        <div class="insight">
+          <h4>"Too expensive" masks a value perception problem</h4>
+          <p>Deep-dive into "price" churners showed 71% had activated fewer than 3 features. This is a value realisation failure, not a pricing failure. New in-app adoption score triggers CS intervention at Day 14 for low-engagement accounts on paid plans.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="footer">
+  <div><p>Case Study 08 / 09 · SaaS Metrics Analytics · B2B SaaS</p><p style="margin-top:3px">Tools: SQL (Snowflake) · Python · Tableau Desktop · Stripe API · Segment</p></div>
+  <div class="footer-nav">
+    <a href="07_supply_chain_analytics.html">← Supply Chain</a>
+    <a href="09_healthcare_analytics.html">Healthcare →</a>
+  </div>
+</div>
+
+<script>
+const IND='#6366f1',VIO='#8b5cf6',LIME='#84cc16',CYAN='#22d3ee',PINK='#ec4899',AMB='#f59e0b',MUTED='#64748b',BORDER='rgba(28,32,64,.8)';
+const sans={family:'Manrope',size:10};
+const grid={color:'rgba(255,255,255,.04)'};
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// MRR stacked bar
+new Chart(document.getElementById('mrrChart'),{
+  type:'bar',
+  data:{labels:months,datasets:[
+    {label:'New MRR',data:[8200,7800,9100,8600,10200,9400,11200,10600,12100,11400,12800,11900],backgroundColor:'rgba(99,102,241,.7)',stack:'a',borderRadius:2},
+    {label:'Expansion MRR',data:[4800,5200,5600,6100,6800,7200,7800,8100,8600,9100,9800,10200],backgroundColor:'rgba(34,211,238,.7)',stack:'a',borderRadius:2},
+    {label:'Contraction',data:[-1200,-1400,-1100,-1600,-1300,-1800,-1400,-1600,-1200,-1400,-1100,-1300],backgroundColor:'rgba(245,158,11,.65)',stack:'b',borderRadius:2},
+    {label:'Churned MRR',data:[-3800,-4200,-3600,-4800,-4100,-5200,-4600,-5100,-4400,-4800,-4200,-4600],backgroundColor:'rgba(236,72,153,.65)',stack:'b',borderRadius:2},
+    {label:'Net New MRR',data:[8000,7400,10000,8300,11600,9600,13000,11000,15100,14300,17300,16200],type:'line',borderColor:LIME,pointRadius:3,borderWidth:2,fill:false,tension:.4,yAxisID:'y'},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}},
+    scales:{x:{ticks:{color:MUTED,font:sans},grid:{display:false},stacked:true},y:{ticks:{color:MUTED,font:sans,callback:v=>'£'+(v/1000).toFixed(0)+'K'},grid,stacked:true}}
+  }
+});
+
+// MRR waterfall
+const wfData=[
+  {lbl:'Opening MRR',val:167600,color:IND,type:'base'},
+  {lbl:'New',val:11900,color:IND+'cc',type:'add'},
+  {lbl:'Expansion',val:10200,color:CYAN+'cc',type:'add'},
+  {lbl:'Contraction',val:-1300,color:AMB+'cc',type:'sub'},
+  {lbl:'Churn',val:-4600,color:PINK+'cc',type:'sub'},
+  {lbl:'Reactivation',val:1000,color:LIME+'cc',type:'add'},
+  {lbl:'Closing MRR',val:174800,color:LIME,type:'total'},
+];
+const wf=document.getElementById('mrrWf');
+const maxV=174800;
+wfData.forEach(d=>{
+  const w=(Math.abs(d.val)/maxV*100).toFixed(1);
+  const sign=d.val>0?'+':'';
+  const numColor=d.val<0?PINK:LIME;
+  wf.innerHTML+=`<div class="wf-item">
+    <div class="wf-lbl">${d.lbl}</div>
+    <div class="wf-bar-area"><div class="wf-b" style="width:0%;background:${d.color}" id="wfb_saas_${d.lbl.replace(/\s/g,'')}"><span>${sign}£${Math.abs(d.val/1000).toFixed(1)}K</span></div></div>
+    <div class="wf-num" style="color:${numColor}">${sign}£${(Math.abs(d.val)/1000).toFixed(1)}K</div>
+  </div>`;
+});
+setTimeout(()=>wfData.forEach(d=>{
+  const el=document.getElementById(`wfb_saas_${d.lbl.replace(/\s/g,'')}`);
+  if(el)el.style.width=(Math.abs(d.val)/maxV*100)+'%';
+}),200);
+
+// Plan bar
+const pb=document.getElementById('planBar');
+[{pct:18,color:IND},{pct:44,color:CYAN},{pct:38,color:LIME}].forEach(p=>{
+  const seg=document.createElement('div');
+  seg.className='plan-seg';
+  seg.style.width='0%';
+  seg.style.background=p.color;
+  seg.textContent=p.pct+'%';
+  pb.appendChild(seg);
+  setTimeout(()=>seg.style.width=p.pct+'%',300);
+});
+
+// Cohort matrix
+const cohortMonths=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'];
+const periods=['M0','M1','M2','M3','M4','M5','M6','M9','M12'];
+const cData=[
+  [100,92,86,81,78,76,88,94,null],[100,91,85,80,76,74,85,null,null],
+  [100,93,88,84,80,112,null,null,null],[100,90,83,79,75,null,null,null,null],
+  [100,94,89,86,null,null,null,null,null],[100,92,87,null,null,null,null,null,null],
+  [100,95,null,null,null,null,null,null,null],[100,null,null,null,null,null,null,null,null],
+];
+function cohortColor(v){
+  if(v===null)return'transparent';
+  if(v>=120)return`rgba(132,204,22,${.2+v/400})`;
+  if(v>=100)return`rgba(34,211,238,${.15+v/400})`;
+  if(v>=80)return`rgba(99,102,241,${.15+v/400})`;
+  if(v>=60)return`rgba(245,158,11,${.15+v/300})`;
+  return`rgba(236,72,153,${.15+v/300})`;
+}
+const ct=document.getElementById('cohortTable');
+ct.innerHTML=`<thead><tr><th>Cohort</th>${periods.map(p=>`<th>${p}</th>`).join('')}</tr></thead><tbody>`;
+cohortMonths.forEach((m,i)=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${m} '24</td>${periods.map((_,j)=>{
+    const v=cData[i][j];
+    return`<td style="background:${cohortColor(v)};color:${v?'rgba(255,255,255,.85)':'transparent'}">${v?v+'%':'—'}</td>`;
+  }).join('')}`;
+  ct.querySelector('tbody').appendChild(tr);
+});
+
+// LTV:CAC by plan
+new Chart(document.getElementById('ltvcacChart'),{
+  type:'bar',
+  data:{labels:['Starter','Pro','Enterprise'],datasets:[
+    {label:'LTV (£)',data:[1240,3800,12400],backgroundColor:[IND+'99',CYAN+'99',LIME+'99'],borderRadius:3},
+    {label:'CAC × 10 (£)',data:[3200,6800,14200],type:'line',borderColor:PINK,pointRadius:5,borderWidth:2,fill:false},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}},
+    scales:{x:{ticks:{color:MUTED,font:sans},grid:{display:false}},y:{ticks:{color:MUTED,font:sans,callback:v=>'£'+(v/1000).toFixed(1)+'K'},grid}}
+  }
+});
+
+// Churn reasons
+new Chart(document.getElementById('churnChart'),{
+  type:'bar',
+  data:{labels:['Too Expensive','Missing Feature','Competitor','Not Enough Value','Business Closed','Poor Support','Changed Needs'],
+    datasets:[
+      {label:'Starter',data:[38,22,18,12,6,8,14],backgroundColor:IND+'88',stack:'a',borderRadius:2},
+      {label:'Pro',data:[28,18,24,16,4,12,10],backgroundColor:CYAN+'88',stack:'a',borderRadius:2},
+      {label:'Enterprise',data:[8,6,14,4,2,4,4],backgroundColor:LIME+'88',stack:'a',borderRadius:2},
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+    plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}},
+    scales:{x:{ticks:{color:MUTED,font:sans},grid,stacked:true},y:{ticks:{color:MUTED,font:{...sans,size:9}},grid:{display:false},stacked:true}}
+  }
+});
+</script>
+</body>
+</html>

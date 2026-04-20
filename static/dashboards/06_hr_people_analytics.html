@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR & People Analytics · Workforce Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sand:#f7f3ec;--cream:#fdfaf5;--warm:#ede7da;
+  --terra:#c25b3a;--terra2:#e07452;--gold:#c49a2a;
+  --teal:#2a7a78;--navy:#1d3557;--sage:#5a7a5a;
+  --border:#d8d0c4;--border2:#c4b8a8;
+  --ink:#1a1712;--muted:#7a6e62;
+  --font-display:'Libre Baskerville',Georgia,serif;
+  --font-body:'Source Sans 3',system-ui,sans-serif;
+}
+body{background:var(--sand);color:var(--ink);font-family:var(--font-body);font-size:13px;min-height:100vh}
+
+/* TABLEAU HEADER */
+.tableau-header{
+  background:var(--ink);padding:0;
+  display:grid;grid-template-columns:auto 1fr auto;
+  align-items:stretch;
+  border-bottom:3px solid var(--terra);
+}
+.th-brand{
+  padding:16px 28px;background:var(--terra);
+  display:flex;align-items:center;gap:10px;
+}
+.th-brand-icon{
+  width:32px;height:32px;background:white;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+.th-brand-text{color:white;font-weight:700;font-size:14px;letter-spacing:-.3px}
+.th-brand-sub{color:rgba(255,255,255,.7);font-size:10px;margin-top:1px}
+.th-title{
+  padding:16px 28px;display:flex;flex-direction:column;justify-content:center;
+  border-right:1px solid rgba(255,255,255,.1);
+}
+.th-title h1{
+  font-family:var(--font-display);font-size:20px;
+  color:white;font-weight:700;letter-spacing:-.3px;
+}
+.th-title p{font-size:11px;color:rgba(255,255,255,.5);margin-top:4px}
+.th-meta{
+  padding:12px 24px;display:flex;flex-direction:column;gap:6px;justify-content:center;
+}
+.th-meta-item{font-size:10px;color:rgba(255,255,255,.45);display:flex;align-items:center;gap:6px}
+.th-meta-item strong{color:rgba(255,255,255,.85)}
+
+/* TABS */
+.tabs{
+  background:var(--cream);border-bottom:1px solid var(--border);
+  padding:0 28px;display:flex;gap:0;
+}
+.tab{
+  padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;
+  border-bottom:2px solid transparent;color:var(--muted);
+  transition:color .15s,border-color .15s;letter-spacing:.2px;
+}
+.tab.active{color:var(--terra);border-bottom-color:var(--terra)}
+.tab:hover:not(.active){color:var(--ink);border-bottom-color:var(--border2)}
+
+/* LAYOUT */
+.page{max-width:1360px;margin:0 auto;padding:20px 28px;display:flex;flex-direction:column;gap:14px}
+
+/* SECTION HEADER — Tableau style */
+.sh{
+  display:flex;align-items:center;gap:0;margin-bottom:0;
+}
+.sh-accent{width:4px;background:var(--terra);align-self:stretch;margin-right:12px;border-radius:2px}
+.sh-title{font-family:var(--font-display);font-size:14px;font-weight:700;font-style:italic}
+.sh-sub{font-size:11px;color:var(--muted);margin-left:12px}
+
+/* CARDS */
+.card{background:var(--cream);border:1px solid var(--border);padding:0;overflow:hidden}
+.card-head{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--warm);
+}
+.card-title{font-size:12px;font-weight:700;color:var(--ink);letter-spacing:-.1px}
+.card-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.card-body{padding:16px}
+.chart-h{height:220px;position:relative}
+.chart-h.tall{height:280px}
+.chart-h.sm{height:160px}
+
+/* GRID */
+.grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-32{display:grid;grid-template-columns:3fr 2fr;gap:14px}
+.grid-23{display:grid;grid-template-columns:2fr 3fr;gap:14px}
+
+/* KPI CARDS */
+.kpi{background:var(--cream);border:1px solid var(--border);padding:16px;position:relative}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.t::before{background:var(--terra)}
+.kpi.g::before{background:var(--gold)}
+.kpi.tl::before{background:var(--teal)}
+.kpi.sg::before{background:var(--sage)}
+.kpi.nv::before{background:var(--navy)}
+.kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:700;margin-bottom:10px}
+.kpi-val{font-family:var(--font-display);font-size:34px;font-weight:700;line-height:1;color:var(--ink)}
+.kpi-delta{font-size:11px;margin-top:7px;font-weight:600}
+.pos{color:var(--sage)}.neg{color:var(--terra)}.neu{color:var(--muted)}
+
+/* ATTRITION HEATMAP */
+.heat{display:grid;gap:2px}
+.heat-row{display:flex;align-items:center;gap:4px}
+.heat-label{font-size:10px;color:var(--muted);width:100px;flex-shrink:0;text-align:right}
+.heat-cell{width:36px;height:28px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:white;cursor:default;transition:transform .15s}
+.heat-cell:hover{transform:scale(1.15);z-index:2;position:relative}
+.heat-col-labels{display:flex;gap:4px;padding-left:108px;margin-bottom:4px}
+.heat-col-label{width:36px;text-align:center;font-size:9px;color:var(--muted);font-weight:600}
+
+/* SQL */
+.sql{background:var(--ink);padding:18px 20px;font-family:'Courier New',monospace;font-size:11px;line-height:1.9;overflow-x:auto;white-space:pre;border-left:3px solid var(--terra)}
+.sk{color:var(--terra2);font-weight:bold}.sf{color:#90caf9}.ss{color:#a5d6a7}.sc{color:#546e7a;font-style:italic}.sn{color:#ffcc80}
+
+/* DIVERSITY BARS */
+.div-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.div-label{font-size:11px;width:120px;flex-shrink:0;color:var(--muted)}
+.div-bar{display:flex;height:20px;flex:1;overflow:hidden;border-radius:2px}
+.div-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;transition:width 1s}
+.div-pct{font-size:11px;font-weight:600;width:36px;text-align:right;color:var(--ink)}
+
+/* TABLE */
+.hr-table{width:100%;border-collapse:collapse;font-size:11px}
+.hr-table th{padding:8px 12px;background:var(--warm);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border2);text-align:left;white-space:nowrap}
+.hr-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.hr-table tr:hover td{background:rgba(194,91,58,.04)}
+.dept-name{font-weight:700;color:var(--navy)}
+.risk-bar{height:5px;background:var(--warm);border-radius:2px;margin-top:3px;overflow:hidden}
+.risk-fill{height:100%;border-radius:2px}
+
+/* INSIGHT */
+.insight{border-left:3px solid var(--terra);padding:12px 16px;background:rgba(194,91,58,.05);margin-top:12px}
+.insight h4{font-family:var(--font-display);font-size:14px;font-weight:700;font-style:italic;margin-bottom:5px;color:var(--terra)}
+.insight p{font-size:11px;color:var(--muted);line-height:1.7}
+
+/* HEADCOUNT WATERFALL */
+.wf{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.wf-row{display:flex;align-items:center;gap:10px}
+.wf-lbl{font-size:10px;width:120px;flex-shrink:0;color:var(--muted)}
+.wf-bar-area{flex:1;height:18px;position:relative;background:transparent}
+.wf-bar2{position:absolute;height:100%;border-radius:1px;display:flex;align-items:center;padding:0 6px;transition:width 1.2s}
+.wf-bar2 span{font-size:9px;font-weight:700;color:white;white-space:nowrap}
+.wf-num{font-size:10px;font-weight:700;width:48px;text-align:right}
+
+.footer-strip{
+  background:var(--ink);padding:14px 28px;
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+}
+.footer-strip p{font-size:10px;color:rgba(255,255,255,.35)}
+.footer-nav{display:flex;gap:8px}
+.footer-nav a{font-size:10px;color:var(--terra2);text-decoration:none;border:1px solid rgba(194,91,58,.4);padding:6px 12px;transition:background .15s}
+.footer-nav a:hover{background:rgba(194,91,58,.1)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.grid-5,.grid-3,.grid-2,.grid-32,.grid-23{animation:fadeUp .5s ease both}
+</style>
+</head>
+<body>
+
+<header class="tableau-header">
+  <div class="th-brand">
+    <div class="th-brand-icon">👥</div>
+    <div><div class="th-brand-text">Tableau</div><div class="th-brand-sub">Public</div></div>
+  </div>
+  <div class="th-title">
+    <h1>HR & People Analytics · Workforce Intelligence</h1>
+    <p>Global retail group · 4,200 employees · 12 departments · FY 2024 · HRIS: Workday → Redshift</p>
+  </div>
+  <div class="th-meta">
+    <div class="th-meta-item">Case Study <strong>06 / 09</strong></div>
+    <div class="th-meta-item">Tools: <strong>SQL · Python · Tableau · Excel</strong></div>
+    <div class="th-meta-item">Data: <strong>Workday HRIS · Survey · Payroll</strong></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active">Workforce Overview</div>
+  <div class="tab">Attrition Analysis</div>
+  <div class="tab">Compensation</div>
+  <div class="tab">Diversity & Inclusion</div>
+</div>
+
+<main class="page">
+
+  <!-- KPI ROW -->
+  <div class="grid-5">
+    <div class="kpi t"><div class="kpi-label">Headcount</div><div class="kpi-val">4,218</div><div class="kpi-delta pos">↑ 142 vs prior yr</div></div>
+    <div class="kpi g"><div class="kpi-label">Attrition Rate</div><div class="kpi-val">14.2%</div><div class="kpi-delta neg">↑ 1.8pp — FLAG</div></div>
+    <div class="kpi tl"><div class="kpi-label">Avg Tenure</div><div class="kpi-val">3.8 yrs</div><div class="kpi-delta neu">↔ stable</div></div>
+    <div class="kpi sg"><div class="kpi-label">Time-to-Fill</div><div class="kpi-val">38 days</div><div class="kpi-delta pos">↓ 6 days vs LY</div></div>
+    <div class="kpi nv"><div class="kpi-label">eNPS Score</div><div class="kpi-val">+34</div><div class="kpi-delta pos">↑ 8pts vs LY</div></div>
+  </div>
+
+  <!-- HEADCOUNT + ATTRITION TREND -->
+  <div class="grid-32">
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Monthly Headcount & Attrition Rate</div><div class="card-sub">Dual-axis · hires (bar) · leavers (bar) · rolling attrition % (line)</div></div></div>
+      <div class="card-body"><div class="chart-h tall"><canvas id="hcChart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Headcount Movement Waterfall</div><div class="card-sub">Jan → Dec 2024 flow</div></div></div>
+      <div class="card-body">
+        <div class="wf" id="wfBars"></div>
+        <div class="insight" style="margin-top:16px">
+          <h4>Voluntary exits surging in Q2</h4>
+          <p>68% of leavers cited "limited progression" in exit interviews. Structured career pathing framework launched Q3 — early attrition indicators improving in tech and ops departments.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATTRITION BY DEPT + SQL -->
+  <div class="grid-23">
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Attrition Risk by Department</div><div class="card-sub">FY 2024 · voluntary exits only · flagged > 15% threshold</div></div></div>
+      <div class="card-body" style="padding:10px 14px">
+        <table class="hr-table">
+          <thead><tr><th>Department</th><th>HC</th><th>Leavers</th><th>Rate</th><th>Attrition Vs Avg</th><th>Avg Tenure</th><th>Risk</th></tr></thead>
+          <tbody id="deptTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">The SQL — Attrition Driver Query</div><div class="card-sub">Workday HRIS → Redshift · weekly scheduled</div></div></div>
+      <div class="sql"><span class="sc">-- Identify attrition predictors by segment</span>
+<span class="sc">-- Output feeds Tableau attrition risk dashboard</span>
+
+<span class="sk">WITH</span> employee_base <span class="sk">AS</span> (
+  <span class="sk">SELECT</span>
+    e.employee_id,
+    e.department,
+    e.job_level,
+    e.tenure_months,
+    e.salary,
+    e.last_promotion_date,
+    e.manager_id,
+    <span class="sf">DATE_DIFF</span>(<span class="sf">CURRENT_DATE</span>(),
+      e.last_promotion_date, <span class="sk">MONTH</span>)
+                            <span class="sk">AS</span> months_since_promo,
+    <span class="sk">CASE WHEN</span> t.termination_date
+              <span class="sk">IS NOT NULL</span>
+         <span class="sk">AND</span> t.termination_type = <span class="ss">'Voluntary'</span>
+         <span class="sk">THEN</span> <span class="sn">1</span> <span class="sk">ELSE</span> <span class="sn">0</span>
+    <span class="sk">END</span>                       <span class="sk">AS</span> is_attrited
+  <span class="sk">FROM</span> hris.employees e
+  <span class="sk">LEFT JOIN</span> hris.terminations t
+         <span class="sk">USING</span>(employee_id)
+  <span class="sk">WHERE</span> e.hire_date &lt;= <span class="ss">'2024-12-31'</span>
+),
+mgr_span <span class="sk">AS</span> (
+  <span class="sk">SELECT</span> manager_id,
+    <span class="sf">COUNT</span>(*) <span class="sk">AS</span> direct_reports
+  <span class="sk">FROM</span> employee_base
+  <span class="sk">GROUP BY</span> <span class="sn">1</span>
+),
+survey <span class="sk">AS</span> (
+  <span class="sk">SELECT</span> employee_id,
+    <span class="sf">AVG</span>(engagement_score) <span class="sk">AS</span> eng_score,
+    <span class="sf">AVG</span>(manager_rating)   <span class="sk">AS</span> mgr_score
+  <span class="sk">FROM</span> surveys.pulse_results
+  <span class="sk">WHERE</span> survey_year = <span class="sn">2024</span>
+  <span class="sk">GROUP BY</span> <span class="sn">1</span>
+)
+<span class="sk">SELECT</span>
+  e.department,
+  e.job_level,
+  <span class="sf">ROUND</span>(<span class="sf">AVG</span>(e.tenure_months),<span class="sn">1</span>)        <span class="sk">AS</span> avg_tenure_mo,
+  <span class="sf">ROUND</span>(<span class="sf">AVG</span>(e.months_since_promo),<span class="sn">1</span>)  <span class="sk">AS</span> avg_mo_since_promo,
+  <span class="sf">ROUND</span>(<span class="sf">AVG</span>(s.eng_score),<span class="sn">2</span>)           <span class="sk">AS</span> avg_engagement,
+  <span class="sf">ROUND</span>(<span class="sf">AVG</span>(m.direct_reports),<span class="sn">1</span>)      <span class="sk">AS</span> avg_span_of_ctrl,
+  <span class="sf">ROUND</span>(<span class="sf">AVG</span>(e.is_attrited)*<span class="sn">100</span>,<span class="sn">1</span>)    <span class="sk">AS</span> attrition_rate_pct,
+  <span class="sf">COUNT</span>(*)                             <span class="sk">AS</span> n_employees
+<span class="sk">FROM</span> employee_base e
+<span class="sk">LEFT JOIN</span> survey s <span class="sk">USING</span>(employee_id)
+<span class="sk">LEFT JOIN</span> mgr_span m
+       <span class="sk">ON</span> e.manager_id = m.manager_id
+<span class="sk">GROUP BY</span> <span class="sn">1</span>,<span class="sn">2</span>
+<span class="sk">HAVING</span> <span class="sf">COUNT</span>(*) >= <span class="sn">10</span>
+<span class="sk">ORDER BY</span> attrition_rate_pct <span class="sk">DESC</span></div>
+    </div>
+  </div>
+
+  <!-- DIVERSITY + HEATMAP -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Diversity & Representation by Level</div><div class="card-sub">Gender split across seniority bands</div></div></div>
+      <div class="card-body">
+        <div id="divBars" style="margin-top:4px"></div>
+        <div class="chart-h sm" style="margin-top:20px"><canvas id="ethnicChart"></canvas></div>
+        <div class="insight" style="margin-top:0">
+          <h4>Leadership gap identified</h4>
+          <p>Women represent 54% of total workforce but only 31% of Director+ roles. Mentoring programme and structured succession planning launched for high-potential female IC track.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Attrition Heatmap — Dept × Tenure Band</div><div class="card-sub">Darker = higher voluntary exit rate · hover for value</div></div></div>
+      <div class="card-body">
+        <div class="heat-col-labels" id="heatColLabels"></div>
+        <div class="heat" id="heatmap"></div>
+        <div class="insight" style="margin-top:16px">
+          <h4>0–1 year tenure is the critical window</h4>
+          <p>Employees in their first year across all departments show 2.3× the attrition of the 2–4 year cohort. Structured 90-day onboarding programme reduced new-hire attrition by 22% in pilot departments.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="footer-strip">
+  <div>
+    <p>Case Study 06 / 09 · HR & People Analytics · Global Retail Group</p>
+    <p style="margin-top:3px">Tools: SQL (Redshift) · Python (pandas) · Tableau · Excel · Workday HRIS</p>
+  </div>
+  <div class="footer-nav">
+    <a href="05_sales_crm_analytics.html">← Sales</a>
+    <a href="07_supply_chain_analytics.html">Supply Chain →</a>
+  </div>
+</div>
+
+<script>
+const TERRA='#c25b3a',GOLD='#c49a2a',TEAL='#2a7a78',NAVY='#1d3557',SAGE='#5a7a5a',MUTED='#7a6e62',BORDER='#d8d0c4';
+const serif={family:'Libre Baskerville',size:10};
+const sans={family:'Source Sans 3',size:10};
+const gridCol='rgba(26,23,18,.06)';
+
+// HC + attrition trend
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+new Chart(document.getElementById('hcChart'),{
+  type:'bar',
+  data:{labels:months,datasets:[
+    {label:'Hires',data:[28,34,41,38,52,29,44,38,61,48,35,42],backgroundColor:'rgba(42,122,120,.65)',stack:'a',borderRadius:2},
+    {label:'Leavers',data:[18,22,28,31,44,38,34,29,26,24,22,20],backgroundColor:'rgba(194,91,58,.65)',stack:'b',borderRadius:2},
+    {label:'Attrition %',data:[12.8,13.1,13.4,13.9,14.8,15.2,14.9,14.6,14.2,14.0,13.8,13.6],type:'line',yAxisID:'y2',borderColor:GOLD,pointRadius:3,borderWidth:2,fill:false,tension:.4},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:12}}},
+    scales:{
+      x:{ticks:{color:MUTED,font:sans},grid:{display:false}},
+      y:{ticks:{color:MUTED,font:sans},grid:{color:gridCol},title:{display:true,text:'Headcount Movements',color:MUTED,font:sans}},
+      y2:{position:'right',ticks:{color:GOLD,font:sans,callback:v=>v+'%'},grid:{display:false},min:10,max:18},
+    }
+  }
+});
+
+// Waterfall bars
+const wfData=[
+  {lbl:'Opening HC',val:4076,color:NAVY,type:'start'},
+  {lbl:'New Hires',val:490,color:TEAL,type:'add'},
+  {lbl:'Voluntary Exit',val:−380,color:TERRA,type:'sub'},
+  {lbl:'Involuntary',val:−118,color:'#a0522d',type:'sub'},
+  {lbl:'Transfers In',val:84,color:SAGE,type:'add'},
+  {lbl:'Closing HC',val:4218,color:NAVY,type:'total'},
+];
+const wf=document.getElementById('wfBars');
+const maxV=4218;
+wfData.forEach(d=>{
+  const w=(Math.abs(d.val)/maxV*100).toFixed(1);
+  const sign=d.val>0?'+':'';
+  wf.innerHTML+=`<div class="wf-row">
+    <div class="wf-lbl">${d.lbl}</div>
+    <div class="wf-bar-area"><div class="wf-bar2" style="width:0%;background:${d.color};left:${d.type==='sub'?'auto':'0'};right:${d.type==='sub'?'0':'auto'}" id="wfb_${d.lbl.replace(/\s/g,'')}"><span>${sign}${d.val}</span></div></div>
+    <div class="wf-num" style="color:${d.val<0?TERRA:NAVY}">${sign}${d.val}</div>
+  </div>`;
+});
+setTimeout(()=>wfData.forEach(d=>{
+  const el=document.getElementById(`wfb_${d.lbl.replace(/\s/g,'')}`);
+  if(el) el.style.width=(Math.abs(d.val)/maxV*100)+'%';
+}),200);
+
+// Dept table
+const depts=[
+  {name:'Technology',hc:380,left:76,tenure:'2.1 yrs',risk:20.0},
+  {name:'Customer Svc',hc:620,left:118,tenure:'1.8 yrs',risk:19.0},
+  {name:'Retail Ops',hc:1240,left:211,tenure:'3.1 yrs',risk:17.0},
+  {name:'Marketing',hc:180,left:25,tenure:'3.4 yrs',risk:13.9},
+  {name:'Finance',hc:140,left:15,tenure:'4.8 yrs',risk:10.7},
+  {name:'HR',hc:82,left:8,tenure:'5.2 yrs',risk:9.8},
+  {name:'Legal',hc:48,left:4,tenure:'6.1 yrs',risk:8.3},
+];
+const dt=document.getElementById('deptTable');
+depts.forEach(d=>{
+  const rc=d.risk>=15?TERRA:d.risk>=12?GOLD:SAGE;
+  const flag=d.risk>=15?'🔴':d.risk>=12?'🟡':'🟢';
+  dt.innerHTML+=`<tr>
+    <td><span class="dept-name">${d.name}</span></td>
+    <td style="color:${MUTED}">${d.hc}</td>
+    <td style="color:${TERRA};font-weight:600">${d.left}</td>
+    <td><span style="font-weight:700;color:${rc}">${d.risk}%</span><div class="risk-bar"><div class="risk-fill" style="width:${d.risk/25*100}%;background:${rc}"></div></div></td>
+    <td><div style="height:5px;background:${BORDER};border-radius:2px;overflow:hidden;margin:4px 0"><div style="height:100%;width:${Math.min((d.risk-14.2)/10*100+50,100)}%;background:${rc}"></div></div></td>
+    <td style="color:${MUTED}">${d.tenure}</td>
+    <td>${flag}</td>
+  </tr>`;
+});
+
+// Diversity bars
+const levels=[
+  {lbl:'Director+',f:31,m:69},
+  {lbl:'Senior Mgr',f:38,m:62},
+  {lbl:'Manager',f:45,m:55},
+  {lbl:'Senior IC',f:49,m:51},
+  {lbl:'IC / Staff',f:58,m:42},
+];
+const db=document.getElementById('divBars');
+levels.forEach(l=>{
+  db.innerHTML+=`<div class="div-row">
+    <div class="div-label">${l.lbl}</div>
+    <div class="div-bar">
+      <div class="div-seg" style="width:${l.f}%;background:${TERRA};border-radius:2px 0 0 2px">${l.f}%</div>
+      <div class="div-seg" style="width:${l.m}%;background:${NAVY};border-radius:0 2px 2px 0">${l.m}%</div>
+    </div>
+    <div class="div-pct">${l.f}F/${l.m}M</div>
+  </div>`;
+});
+
+// Ethnic donut
+new Chart(document.getElementById('ethnicChart'),{
+  type:'doughnut',
+  data:{labels:['White British','Asian/Asian British','Black/African/Caribbean','Mixed','Other'],
+    datasets:[{data:[54,18,12,9,7],backgroundColor:[NAVY,TEAL,TERRA,GOLD,SAGE],borderWidth:0}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}}}
+});
+
+// Heatmap
+const heatDepts=['Technology','Cust. Svc','Retail Ops','Marketing','Finance'];
+const tenureBands=['0–1yr','1–2yr','2–4yr','4–7yr','7yr+'];
+const heatVals=[
+  [28,22,14,9,6],[24,19,11,7,5],[22,17,10,6,4],
+  [16,12,8,5,3],[11,8,5,3,2]
+];
+function heatColor(v){
+  if(v>=22)return`rgba(194,91,58,${.5+v/80})`;
+  if(v>=14)return`rgba(196,154,42,${.4+v/80})`;
+  if(v>=8)return`rgba(42,122,120,${.3+v/80})`;
+  return`rgba(29,53,87,${.25+v/80})`;
+}
+const hcl=document.getElementById('heatColLabels');
+tenureBands.forEach(t=>hcl.innerHTML+=`<div class="heat-col-label">${t}</div>`);
+const hm=document.getElementById('heatmap');
+heatDepts.forEach((dept,i)=>{
+  const row=document.createElement('div');
+  row.className='heat-row';
+  row.innerHTML=`<div class="heat-label">${dept}</div>`;
+  heatVals[i].forEach(v=>{
+    const cell=document.createElement('div');
+    cell.className='heat-cell';
+    cell.style.background=heatColor(v);
+    cell.textContent=v+'%';
+    cell.title=`${dept} · ${tenureBands[heatVals[i].indexOf(v)]} · ${v}% attrition`;
+    row.appendChild(cell);
+  });
+  hm.appendChild(row);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Healthcare Analytics · Patient Outcomes & Operational Efficiency</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f8;--white:#ffffff;--surface:#f8fafc;--lift:#eef2f7;
+  --border:#dde3ec;--border2:#c8d3e0;
+  --teal:#0891b2;--teal2:#06b6d4;--green:#059669;--red:#dc2626;--amber:#d97706;--blue:#2563eb;--purple:#7c3aed;
+  --ink:#0f172a;--muted:#64748b;--dim:#94a3b8;
+  --font:'Plus Jakarta Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:13px;min-height:100vh}
+
+/* POWER BI NHS-STYLE HEADER */
+.header{background:var(--ink);display:flex;align-items:stretch}
+.header-brand{
+  background:#003087;padding:20px 28px;
+  display:flex;align-items:center;gap:14px;min-width:200px;
+}
+.brand-icon{width:40px;height:40px;background:white;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.brand-text{color:white}
+.brand-text h2{font-size:15px;font-weight:800;letter-spacing:.5px}
+.brand-text p{font-size:9px;color:rgba(255,255,255,.55);letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.header-main{flex:1;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-left:1px solid rgba(255,255,255,.1)}
+.header-title h1{font-size:clamp(16px,2.5vw,22px);font-weight:800;color:white;letter-spacing:-.4px}
+.header-title p{font-size:11px;color:rgba(255,255,255,.45);margin-top:4px}
+.header-pills{display:flex;gap:8px;flex-wrap:wrap}
+.hpill{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:20px}
+.hpill-t{background:rgba(8,145,178,.3);color:var(--teal2);border:1px solid rgba(8,145,178,.4)}
+.hpill-g{background:rgba(5,150,105,.25);color:#34d399;border:1px solid rgba(5,150,105,.3)}
+.hpill-r{background:rgba(220,38,38,.25);color:#f87171;border:1px solid rgba(220,38,38,.3)}
+
+/* NAV */
+.nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;display:flex}
+.nav-item{padding:11px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.nav-item.active{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* PAGE */
+.page{max-width:1400px;margin:0 auto;padding:18px 28px;display:flex;flex-direction:column;gap:14px}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.kpi{background:var(--white);border:1px solid var(--border);padding:16px 18px;border-radius:2px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px}
+.kpi.t::before{background:var(--teal)}.kpi.g::before{background:var(--green)}.kpi.r::before{background:var(--red)}.kpi.a::before{background:var(--amber)}.kpi.b::before{background:var(--blue)}.kpi.p::before{background:var(--purple)}
+.kpi-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:700;margin-bottom:9px}
+.kpi-val{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.5px}
+.kpi-val.t{color:var(--teal)}.kpi-val.g{color:var(--green)}.kpi-val.r{color:var(--red)}.kpi-val.a{color:var(--amber)}.kpi-val.b{color:var(--blue)}.kpi-val.p{color:var(--purple)}
+.kpi-delta{font-size:11px;font-weight:600;margin-top:6px}
+.pos{color:var(--green)}.neg{color:var(--red)}.neu{color:var(--muted)}
+.kpi-bench{font-size:9px;color:var(--dim);margin-top:3px}
+
+/* GRIDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid-32{display:grid;grid-template-columns:3fr 2fr;gap:14px}
+.grid-23{display:grid;grid-template-columns:2fr 3fr;gap:14px}
+
+/* VIS */
+.vis{background:var(--white);border:1px solid var(--border);border-radius:2px;overflow:hidden}
+.vis-head{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:flex-start}
+.vis-title{font-size:12px;font-weight:700;color:var(--ink)}
+.vis-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.vis-body{padding:14px 16px}
+.ch-h{height:220px;position:relative}
+.ch-h.tall{height:280px}
+.ch-h.sm{height:160px}
+
+/* WAIT TABLE */
+.wait-table{width:100%;border-collapse:collapse;font-size:11px}
+.wait-table th{padding:7px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;border-bottom:2px solid var(--border);text-align:left;background:var(--surface);white-space:nowrap}
+.wait-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.wait-table tr:hover td{background:rgba(8,145,178,.04)}
+.dept{font-weight:700;color:var(--ink)}
+.rag-red{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:5px}
+.rag-amber{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-right:5px}
+.rag-green{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px}
+.wait-bar{height:5px;background:var(--lift);border-radius:2px;margin-top:3px;overflow:hidden}
+.wait-fill{height:100%;border-radius:2px}
+.badge-h{font-size:9px;font-weight:700;padding:2px 7px;letter-spacing:.5px}
+.badge-ok{background:rgba(5,150,105,.1);color:var(--green)}
+.badge-warn{background:rgba(217,119,6,.1);color:var(--amber)}
+.badge-fail{background:rgba(220,38,38,.1);color:var(--red)}
+
+/* SQL */
+.sql{background:#0a0e1a;padding:18px 20px;font-family:var(--mono);font-size:11px;line-height:1.9;overflow-x:auto;white-space:pre;border-left:3px solid var(--teal)}
+.sk{color:var(--teal2);font-weight:bold}.sf{color:#93c5fd}.ss{color:#86efac}.sc{color:#334155;font-style:italic}.sn{color:#fde68a}
+
+/* INSIGHT */
+.insight{border-left:3px solid var(--teal);padding:12px 14px;background:rgba(8,145,178,.05);margin-top:12px}
+.insight h4{font-size:13px;font-weight:700;color:var(--teal);margin-bottom:5px}
+.insight p{font-size:11px;color:var(--muted);line-height:1.7}
+
+/* OUTCOME BARS */
+.outcome-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.out-lbl{font-size:10px;color:var(--muted);width:140px;flex-shrink:0}
+.out-bar-wrap{flex:1;height:18px;background:var(--lift);border-radius:2px;overflow:hidden}
+.out-bar{height:100%;border-radius:2px;display:flex;align-items:center;padding:0 8px;transition:width 1.2s}
+.out-bar span{font-size:9px;font-weight:700;color:white}
+.out-pct{font-size:11px;font-weight:700;width:40px;text-align:right}
+
+/* READMISSION */
+.read-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.read-item:last-child{border-bottom:none}
+.read-dept{font-size:12px;font-weight:600}
+.read-stats{display:flex;gap:20px;align-items:center}
+.read-stat{text-align:right}
+.read-val{font-size:14px;font-weight:700}
+.read-lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px}
+
+.footer{border-top:1px solid var(--border);padding:14px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:var(--white)}
+.footer p{font-size:10px;color:var(--muted)}
+.footer-nav{display:flex;gap:8px}
+.footer-nav a{font-size:10px;color:var(--teal);text-decoration:none;border:1px solid rgba(8,145,178,.4);padding:6px 12px;transition:background .15s;border-radius:1px}
+.footer-nav a:hover{background:rgba(8,145,178,.08)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.kpi-strip,.vis,.grid-2,.grid-3,.grid-32,.grid-23{animation:fadeUp .45s ease both}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="brand-icon">🏥</div>
+    <div class="brand-text">
+      <h2>NHS Trust</h2>
+      <p>Power BI · Reporting</p>
+    </div>
+  </div>
+  <div class="header-main">
+    <div class="header-title">
+      <h1>Patient Outcomes & Operational Efficiency</h1>
+      <p>District General Hospital · 620 beds · 180K A&E attendances/yr · Case Study 09 / 09</p>
+    </div>
+    <div class="header-pills">
+      <span class="hpill hpill-t">Power BI</span>
+      <span class="hpill hpill-g">SQL · Python</span>
+      <span class="hpill hpill-r">Live Data</span>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-item active">Operational Overview</div>
+  <div class="nav-item">Patient Outcomes</div>
+  <div class="nav-item">Waiting Times</div>
+  <div class="nav-item">Bed Occupancy</div>
+  <div class="nav-item">Finance</div>
+</div>
+
+<main class="page">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi t"><div class="kpi-lbl">4-hr A&E Target</div><div class="kpi-val t">76.4%</div><div class="kpi-delta neg">↓ 3.6pp · Target 95%</div><div class="kpi-bench">National avg: 74.2%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Bed Occupancy</div><div class="kpi-val g">91.8%</div><div class="kpi-delta neg">↑ · Optimal &lt;85%</div><div class="kpi-bench">National avg: 89.4%</div></div>
+    <div class="kpi a"><div class="kpi-lbl">18-wk RTT</div><div class="kpi-val a">68.2%</div><div class="kpi-delta neg">↓ · Target 92%</div><div class="kpi-bench">National avg: 65.8%</div></div>
+    <div class="kpi r"><div class="kpi-lbl">30-day Readmission</div><div class="kpi-val r">8.4%</div><div class="kpi-delta pos">↓ 0.6pp vs LY</div><div class="kpi-bench">Target &lt;8%</div></div>
+    <div class="kpi b"><div class="kpi-lbl">Avg LoS (days)</div><div class="kpi-val b">4.2</div><div class="kpi-delta pos">↓ 0.3d vs LY</div><div class="kpi-bench">National avg: 4.6d</div></div>
+    <div class="kpi p"><div class="kpi-lbl">CQUIN Score</div><div class="kpi-val p">84%</div><div class="kpi-delta pos">↑ 4pp vs Q2</div><div class="kpi-bench">Target 80%</div></div>
+  </div>
+
+  <!-- A&E + BED OCCUPANCY -->
+  <div class="grid-32">
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">Weekly A&E Attendances & 4-Hour Performance</div><div class="vis-sub">Volume (bar) · 4hr target % (line) · 95% standard (dashed)</div></div></div>
+      <div class="vis-body"><div class="ch-h tall"><canvas id="aeChart"></canvas></div>
+        <div class="insight">
+          <h4>Friday 4pm–Monday 8am is the critical window</h4>
+          <p>Analysis of 180K attendances shows 4hr performance drops to 68% over weekends vs 82% weekdays. Root cause: 34% fewer senior decision-makers out of hours. Pilot of extended consultant hours on weekends in Q3 — early results show +6pp weekend performance.</p>
+        </div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">Bed Occupancy by Ward Type</div><div class="vis-sub">Current · 7-day avg · optimal threshold 85%</div></div></div>
+      <div class="vis-body">
+        <div class="ch-h"><canvas id="bedChart"></canvas></div>
+        <div style="margin-top:14px">
+          <div class="read-item">
+            <div class="read-dept">Surgical</div>
+            <div class="read-stats">
+              <div class="read-stat"><div class="read-val" style="color:var(--red)">96.2%</div><div class="read-lbl">Occupancy</div></div>
+              <div class="read-stat"><div class="read-val">4.8d</div><div class="read-lbl">Avg LoS</div></div>
+              <span class="badge-h badge-fail">Critical</span>
+            </div>
+          </div>
+          <div class="read-item">
+            <div class="read-dept">Medical</div>
+            <div class="read-stats">
+              <div class="read-stat"><div class="read-val" style="color:var(--red)">94.8%</div><div class="read-lbl">Occupancy</div></div>
+              <div class="read-stat"><div class="read-val">5.2d</div><div class="read-lbl">Avg LoS</div></div>
+              <span class="badge-h badge-fail">Critical</span>
+            </div>
+          </div>
+          <div class="read-item">
+            <div class="read-dept">Maternity</div>
+            <div class="read-stats">
+              <div class="read-stat"><div class="read-val" style="color:var(--amber)">88.4%</div><div class="read-lbl">Occupancy</div></div>
+              <div class="read-stat"><div class="read-val">2.1d</div><div class="read-lbl">Avg LoS</div></div>
+              <span class="badge-h badge-warn">Monitor</span>
+            </div>
+          </div>
+          <div class="read-item">
+            <div class="read-dept">Paediatric</div>
+            <div class="read-stats">
+              <div class="read-stat"><div class="read-val" style="color:var(--green)">81.2%</div><div class="read-lbl">Occupancy</div></div>
+              <div class="read-stat"><div class="read-val">1.8d</div><div class="read-lbl">Avg LoS</div></div>
+              <span class="badge-h badge-ok">OK</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WAITING TIMES + SQL -->
+  <div class="grid-23">
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">Referral-to-Treatment Waiting Times by Specialty</div><div class="vis-sub">18-week RTT performance · RAG rated · NHS standard: 92%</div></div></div>
+      <div class="vis-body" style="padding:10px 14px">
+        <table class="wait-table">
+          <thead><tr><th>Specialty</th><th>On Pathway</th><th>Within 18wk %</th><th>Longest Wait</th><th>Change vs Q2</th><th>RAG</th></tr></thead>
+          <tbody id="waitTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">The SQL — Patient Flow Analysis</div><div class="vis-sub">EPR → SQL Server → Power BI · GDPR-compliant · pseudonymised</div></div></div>
+      <div class="sql"><span class="sc">-- Referral-to-Treatment pathway analysis</span>
+<span class="sc">-- Pseudonymised patient_id (GDPR compliant)</span>
+<span class="sc">-- Identifies breaches and root-cause pathways</span>
+
+<span class="sk">WITH</span> pathways <span class="sk">AS</span> (
+  <span class="sk">SELECT</span>
+    p.pathway_id,
+    p.patient_id,           <span class="sc">-- pseudonymised</span>
+    p.specialty,
+    p.referral_date,
+    p.treatment_date,
+    <span class="sf">DATEDIFF</span>(week,
+      p.referral_date,
+      <span class="sf">COALESCE</span>(p.treatment_date,
+               <span class="sf">GETDATE</span>()))    <span class="sk">AS</span> wait_weeks,
+    <span class="sk">CASE</span>
+      <span class="sk">WHEN</span> <span class="sf">DATEDIFF</span>(week,
+        p.referral_date,
+        <span class="sf">COALESCE</span>(p.treatment_date,
+                 <span class="sf">GETDATE</span>())) &lt;= <span class="sn">18</span>
+      <span class="sk">THEN</span> <span class="sn">1</span> <span class="sk">ELSE</span> <span class="sn">0</span>
+    <span class="sk">END</span>                       <span class="sk">AS</span> within_18wk,
+    p.referral_source,
+    p.discharge_method
+  <span class="sk">FROM</span> clinical.rtt_pathways p
+  <span class="sk">WHERE</span> p.referral_date >= <span class="ss">'2024-01-01'</span>
+    <span class="sk">AND</span> p.is_complete = <span class="sn">1</span>
+),
+delays <span class="sk">AS</span> (
+  <span class="sk">SELECT</span>
+    pathway_id,
+    delay_reason,
+    delay_weeks,
+    delay_stage  <span class="sc">-- diagnostic/treatment/admin</span>
+  <span class="sk">FROM</span> clinical.pathway_delays
+)
+<span class="sk">SELECT</span>
+  pw.specialty,
+  <span class="sf">COUNT</span>(*)                         <span class="sk">AS</span> total_pathways,
+  <span class="sf">ROUND</span>(<span class="sf">AVG</span>(pw.within_18wk)*<span class="sn">100</span>,<span class="sn">1</span>) <span class="sk">AS</span> pct_within_18wk,
+  <span class="sf">MAX</span>(pw.wait_weeks)               <span class="sk">AS</span> max_wait_weeks,
+  <span class="sf">AVG</span>(pw.wait_weeks)               <span class="sk">AS</span> avg_wait_weeks,
+  <span class="sf">SUM</span>(<span class="sk">CASE WHEN</span> pw.within_18wk=<span class="sn">0</span>
+           <span class="sk">THEN</span> <span class="sn">1</span> <span class="sk">ELSE</span> <span class="sn">0</span> <span class="sk">END</span>)    <span class="sk">AS</span> breach_count,
+  d.delay_reason,
+  <span class="sf">SUM</span>(d.delay_weeks)               <span class="sk">AS</span> total_delay_weeks
+<span class="sk">FROM</span> pathways pw
+<span class="sk">LEFT JOIN</span> delays d <span class="sk">USING</span>(pathway_id)
+<span class="sk">GROUP BY</span> pw.specialty, d.delay_reason
+<span class="sk">ORDER BY</span> pct_within_18wk <span class="sk">ASC</span></div>
+    </div>
+  </div>
+
+  <!-- OUTCOMES + READMISSIONS -->
+  <div class="grid-2">
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">Patient Outcome Indicators by Specialty</div><div class="vis-sub">30-day mortality · complication rate · discharge to home %</div></div></div>
+      <div class="vis-body">
+        <div class="ch-h tall"><canvas id="outcomesChart"></canvas></div>
+        <div class="insight">
+          <h4>Cardiology outcomes benchmark favourably</h4>
+          <p>30-day STEMI mortality 4.2% vs national average 5.8%. Attributed to PPCI door-to-balloon time improvements (avg 52 min vs target 60 min). Cardiology is a model for rapid pathway optimisation.</p>
+        </div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><div><div class="vis-title">30-Day Readmission Analysis</div><div class="vis-sub">Rate by specialty · trend · primary cause decomposition</div></div></div>
+      <div class="vis-body">
+        <div class="ch-h"><canvas id="readmitChart"></canvas></div>
+        <div style="margin-top:16px">
+          <div class="vis-title" style="font-size:11px;margin-bottom:10px;color:var(--muted)">Readmission Causes — Top 4</div>
+          <div id="readCauses"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="footer">
+  <div><p>Case Study 09 / 09 · Healthcare Analytics · NHS District General Hospital</p><p style="margin-top:3px">Tools: SQL (SQL Server) · Python (pandas) · Power BI · Excel · NHS SDCS / ECDS / PLICS data</p></div>
+  <div class="footer-nav">
+    <a href="08_saas_metrics_analytics.html">← SaaS</a>
+    <a href="00_portfolio_home.html">↑ Portfolio Home</a>
+  </div>
+</div>
+
+<script>
+const TEAL='#0891b2',TEAL2='#06b6d4',GREEN='#059669',RED='#dc2626',AMBER='#d97706',BLUE='#2563eb',PURPLE='#7c3aed',MUTED='#64748b',BORDER='#dde3ec',BG='#f0f4f8';
+const sans={family:'Plus Jakarta Sans',size:10};
+const grid={color:'rgba(0,0,0,.06)'};
+const weeks13=Array.from({length:13},(_,i)=>`W${i+1}`);
+
+// A&E chart
+new Chart(document.getElementById('aeChart'),{
+  type:'bar',
+  data:{labels:weeks13,datasets:[
+    {label:'Attendances',data:[3240,3480,3180,3620,3840,3560,3780,4020,3860,4180,4020,3960,4240],backgroundColor:'rgba(8,145,178,.4)',borderRadius:2,order:2},
+    {label:'4hr Performance %',data:[78.2,76.8,79.4,75.6,74.2,77.8,76.4,73.8,77.2,75.4,78.6,76.2,77.4],type:'line',yAxisID:'y2',borderColor:TEAL,pointRadius:3,borderWidth:2,fill:false,tension:.4,order:1},
+    {label:'Target 95%',data:Array(13).fill(95),type:'line',yAxisID:'y2',borderColor:'rgba(5,150,105,.5)',borderDash:[4,3],pointRadius:0,borderWidth:1.5,fill:false,order:0},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:12}}},
+    scales:{
+      x:{ticks:{color:MUTED,font:sans},grid:{display:false}},
+      y:{ticks:{color:MUTED,font:sans,callback:v=>v.toLocaleString()},grid},
+      y2:{position:'right',ticks:{color:TEAL,font:sans,callback:v=>v+'%'},grid:{display:false},min:60,max:100},
+    }
+  }
+});
+
+// Bed occupancy radar/bar
+new Chart(document.getElementById('bedChart'),{
+  type:'bar',
+  data:{labels:['Surgical','Medical','Maternity','Paediatric','Critical Care','Orthopaedic'],
+    datasets:[
+      {label:'Current Occupancy %',data:[96.2,94.8,88.4,81.2,92.6,87.4],backgroundColor:v=>{const d=v.raw;return d>=95?`${RED}88`:d>=90?`${AMBER}88`:d>=85?`${AMBER}55`:`${GREEN}88`},borderRadius:3},
+      {label:'Optimal (85%)',data:Array(6).fill(85),type:'line',borderColor:GREEN,borderDash:[4,3],pointRadius:0,borderWidth:1.5,fill:false},
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}},
+    scales:{x:{ticks:{color:MUTED,font:{...sans,size:9}},grid:{display:false}},y:{ticks:{color:MUTED,font:sans,callback:v=>v+'%'},grid,min:70,max:100}}
+  }
+});
+
+// Waiting times table
+const specialties=[
+  {name:'Orthopaedics',n:2840,pct:54.2,max:48,change:'-2.1pp',rag:'r'},
+  {name:'Ophthalmology',n:1620,pct:61.8,max:42,change:'-1.4pp',rag:'r'},
+  {name:'Gynaecology',n:1180,pct:68.4,max:38,change:'+0.8pp',rag:'r'},
+  {name:'ENT',n:980,pct:72.6,max:34,change:'+1.2pp',rag:'a'},
+  {name:'General Surgery',n:2140,pct:76.1,max:31,change:'+0.4pp',rag:'a'},
+  {name:'Urology',n:860,pct:81.4,max:26,change:'+2.1pp',rag:'a'},
+  {name:'Cardiology',n:640,pct:91.2,max:19,change:'+3.4pp',rag:'g'},
+  {name:'Rheumatology',n:420,pct:94.8,max:15,change:'+1.8pp',rag:'g'},
+];
+const wt=document.getElementById('waitTable');
+specialties.forEach(s=>{
+  const rc=s.rag==='r'?RED:s.rag==='a'?AMBER:GREEN;
+  const ragDot=s.rag==='r'?'rag-red':s.rag==='a'?'rag-amber':'rag-green';
+  const badge=s.rag==='r'?'badge-fail':s.rag==='a'?'badge-warn':'badge-ok';
+  const bLabel=s.rag==='r'?'BREACH':s.rag==='a'?'AT RISK':'ACHIEVED';
+  const chColor=s.change.startsWith('+')?GREEN:RED;
+  wt.innerHTML+=`<tr>
+    <td><span class="dept">${s.name}</span></td>
+    <td style="color:${MUTED}">${s.n.toLocaleString()}</td>
+    <td><span style="font-weight:700;color:${rc}">${s.pct}%</span><div class="wait-bar"><div class="wait-fill" style="width:${s.pct}%;background:${rc}"></div></div></td>
+    <td style="font-weight:600;color:${s.max>30?RED:s.max>20?AMBER:GREEN}">${s.max}wk</td>
+    <td style="font-weight:700;color:${chColor}">${s.change}</td>
+    <td><span class="badge-h ${badge}">${bLabel}</span></td>
+  </tr>`;
+});
+
+// Outcomes chart
+new Chart(document.getElementById('outcomesChart'),{
+  type:'bar',
+  data:{labels:['Cardiology','Oncology','General Surg.','Orthopaedics','Respiratory','Stroke'],
+    datasets:[
+      {label:'30-day Mortality %',data:[4.2,8.8,2.1,0.8,6.4,12.4],backgroundColor:`${RED}88`,borderRadius:3,stack:'a'},
+      {label:'Complication Rate %',data:[8.4,14.2,9.8,11.2,10.6,18.4],backgroundColor:`${AMBER}88`,borderRadius:3,stack:'b'},
+      {label:'Discharge Home %',data:[88.4,71.2,84.6,78.4,76.8,62.4],type:'line',yAxisID:'y2',borderColor:GREEN,pointRadius:4,borderWidth:2,fill:false},
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}},
+    scales:{
+      x:{ticks:{color:MUTED,font:{...sans,size:9}},grid:{display:false}},
+      y:{ticks:{color:MUTED,font:sans,callback:v=>v+'%'},grid},
+      y2:{position:'right',ticks:{color:GREEN,font:sans,callback:v=>v+'%'},grid:{display:false},min:50,max:100},
+    }
+  }
+});
+
+// Readmission trend
+new Chart(document.getElementById('readmitChart'),{
+  type:'line',
+  data:{labels:months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],datasets:[
+    {label:'30-day Readmission %',data:[9.2,9.0,8.8,9.1,8.6,8.8,8.4,8.2,8.6,8.2,8.0,8.4],borderColor:RED,backgroundColor:'rgba(220,38,38,.06)',fill:true,tension:.4,pointRadius:3,borderWidth:2},
+    {label:'Target 8%',data:Array(12).fill(8),borderColor:GREEN,borderDash:[4,3],pointRadius:0,borderWidth:1.5,fill:false},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}},
+    scales:{x:{ticks:{color:MUTED,font:sans},grid:{display:false}},y:{ticks:{color:MUTED,font:sans,callback:v=>v+'%'},grid,min:6,max:11}}
+  }
+});
+
+// Readmission causes
+const causes=[
+  {name:'Wound / Surgical Complication',pct:28,color:RED},
+  {name:'Medication / Discharge Planning',pct:22,color:AMBER},
+  {name:'Disease Progression',pct:31,color:BLUE},
+  {name:'Social / Carer Breakdown',pct:19,color:PURPLE},
+];
+const rc=document.getElementById('readCauses');
+causes.forEach(c=>{
+  rc.innerHTML+=`<div class="outcome-row">
+    <div class="out-lbl">${c.name}</div>
+    <div class="out-bar-wrap"><div class="out-bar" style="width:0%;background:${c.color}" id="rc_${c.name.replace(/\W/g,'')}"><span>${c.pct}%</span></div></div>
+    <div class="out-pct" style="color:${c.color}">${c.pct}%</div>
+  </div>`;
+});
+setTimeout(()=>causes.forEach(c=>{
+  const el=document.getElementById(`rc_${c.name.replace(/\W/g,'')}`);
+  if(el)el.style.width=c.pct+'%';
+}),200);
+</script>
+</body>
+</html>

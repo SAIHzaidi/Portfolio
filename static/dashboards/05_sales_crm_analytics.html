@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales & CRM Analytics · Pipeline & Revenue Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pbi-bg:#f3f2f1;--pbi-white:#ffffff;--pbi-surface:#faf9f8;
+  --pbi-blue:#0078d4;--pbi-blue2:#106ebe;--pbi-navy:#004578;
+  --pbi-teal:#00b4d8;--pbi-green:#107c10;--pbi-red:#d83b01;
+  --pbi-yellow:#ffb900;--pbi-purple:#5c2d91;
+  --pbi-border:#edebe9;--pbi-border2:#d2d0ce;
+  --pbi-text:#323130;--pbi-muted:#605e5c;--pbi-dim:#a19f9d;
+  --font:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+body{background:var(--pbi-bg);color:var(--pbi-text);font-family:var(--font);font-size:13px;min-height:100vh}
+
+/* POWER BI TOPBAR */
+.topbar{
+  background:var(--pbi-navy);height:48px;
+  display:flex;align-items:center;padding:0 20px;gap:16px;
+  position:sticky;top:0;z-index:100;
+}
+.topbar-logo{
+  display:flex;align-items:center;gap:10px;
+  font-size:14px;font-weight:600;color:white;letter-spacing:-.2px;
+}
+.topbar-logo-icon{
+  width:28px;height:28px;background:var(--pbi-yellow);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:var(--pbi-navy);
+  border-radius:2px;
+}
+.topbar-divider{width:1px;height:24px;background:rgba(255,255,255,.2)}
+.topbar-title{font-size:13px;color:rgba(255,255,255,.75);font-weight:400}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.topbar-badge{
+  font-size:10px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);
+  padding:3px 10px;border-radius:2px;letter-spacing:.5px;
+}
+.topbar-dot{width:8px;height:8px;background:#6fcf97;border-radius:50%}
+
+/* FILTER BAR */
+.filterbar{
+  background:var(--pbi-white);border-bottom:1px solid var(--pbi-border);
+  padding:8px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.filter-label{font-size:11px;color:var(--pbi-muted);font-weight:500;margin-right:4px}
+.filter-chip{
+  border:1px solid var(--pbi-border2);background:var(--pbi-white);
+  padding:4px 12px;border-radius:2px;font-size:11px;color:var(--pbi-text);
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+  transition:border-color .15s,background .15s;
+}
+.filter-chip:hover{border-color:var(--pbi-blue);background:rgba(0,120,212,.04)}
+.filter-chip.active{border-color:var(--pbi-blue);background:rgba(0,120,212,.08);color:var(--pbi-blue)}
+.filter-chip-val{font-weight:600}
+.filter-chip-icon{font-size:9px;color:var(--pbi-dim)}
+
+/* MAIN CANVAS */
+.canvas{max-width:1400px;margin:0 auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+
+/* PAGE HEADER */
+.page-header{
+  background:var(--pbi-white);border:1px solid var(--pbi-border);
+  padding:16px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-left:4px solid var(--pbi-blue);
+}
+.page-header-left h1{font-size:18px;font-weight:600;color:var(--pbi-navy);letter-spacing:-.3px}
+.page-header-left p{font-size:11px;color:var(--pbi-muted);margin-top:3px}
+.page-header-right{display:flex;gap:8px;align-items:center}
+.refresh-btn{
+  font-size:11px;color:var(--pbi-blue);border:1px solid var(--pbi-blue);
+  padding:5px 12px;cursor:pointer;background:transparent;font-family:var(--font);
+  transition:background .15s;
+}
+.refresh-btn:hover{background:rgba(0,120,212,.06)}
+.last-refresh{font-size:10px;color:var(--pbi-dim)}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi-card{
+  background:var(--pbi-white);border:1px solid var(--pbi-border);
+  padding:16px 18px;position:relative;overflow:hidden;
+}
+.kpi-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+}
+.kpi-card.blue::after{background:var(--pbi-blue)}
+.kpi-card.green::after{background:var(--pbi-green)}
+.kpi-card.red::after{background:var(--pbi-red)}
+.kpi-card.yellow::after{background:var(--pbi-yellow)}
+.kpi-card.teal::after{background:var(--pbi-teal)}
+.kpi-label{font-size:10px;color:var(--pbi-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:8px}
+.kpi-val{font-size:28px;font-weight:700;color:var(--pbi-navy);line-height:1;font-variant-numeric:tabular-nums}
+.kpi-trend{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:600}
+.kpi-trend.up{color:var(--pbi-green)}
+.kpi-trend.down{color:var(--pbi-red)}
+.kpi-vs{font-size:10px;color:var(--pbi-dim);font-weight:400;margin-left:2px}
+.kpi-sparkline{height:32px;margin-top:8px}
+
+/* GRID LAYOUTS */
+.row{display:grid;gap:12px}
+.row-3{grid-template-columns:2fr 1fr 1fr}
+.row-2{grid-template-columns:3fr 2fr}
+.row-equal{grid-template-columns:1fr 1fr}
+.row-4{grid-template-columns:repeat(4,1fr)}
+
+/* VISUAL CARDS */
+.vis{background:var(--pbi-white);border:1px solid var(--pbi-border);padding:0;overflow:hidden}
+.vis-header{
+  padding:12px 16px 10px;border-bottom:1px solid var(--pbi-border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.vis-title{font-size:12px;font-weight:600;color:var(--pbi-text)}
+.vis-subtitle{font-size:10px;color:var(--pbi-dim);margin-top:1px}
+.vis-body{padding:14px 16px}
+.vis-actions{display:flex;gap:6px}
+.vis-btn{
+  font-size:10px;color:var(--pbi-muted);border:none;background:none;
+  cursor:pointer;padding:3px 6px;border-radius:2px;
+  transition:background .1s;font-family:var(--font);
+}
+.vis-btn:hover{background:var(--pbi-bg)}
+.chart-h200{height:200px;position:relative}
+.chart-h240{height:240px;position:relative}
+.chart-h180{height:180px;position:relative}
+.chart-h260{height:260px;position:relative}
+.chart-h300{height:300px;position:relative}
+
+/* PIPELINE FUNNEL */
+.pipe-stage{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:8px;
+}
+.pipe-label{font-size:11px;color:var(--pbi-text);width:110px;flex-shrink:0;font-weight:500}
+.pipe-bar-wrap{flex:1;height:22px;background:var(--pbi-bg);position:relative;border-radius:1px}
+.pipe-bar{height:100%;border-radius:1px;display:flex;align-items:center;padding:0 8px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.pipe-bar span{font-size:10px;font-weight:600;color:white;white-space:nowrap}
+.pipe-count{font-size:10px;color:var(--pbi-muted);width:70px;text-align:right}
+.pipe-pct{font-size:10px;font-weight:600;color:var(--pbi-blue);width:36px;text-align:right}
+
+/* TABLE */
+.pbi-table{width:100%;border-collapse:collapse;font-size:11px}
+.pbi-table th{
+  text-align:left;padding:7px 10px;
+  background:var(--pbi-bg);font-size:10px;font-weight:600;
+  color:var(--pbi-muted);text-transform:uppercase;letter-spacing:.6px;
+  border-bottom:1px solid var(--pbi-border2);white-space:nowrap;
+}
+.pbi-table td{padding:8px 10px;border-bottom:1px solid var(--pbi-border);vertical-align:middle}
+.pbi-table tr:hover td{background:rgba(0,120,212,.03)}
+.pbi-table tr:last-child td{border-bottom:none}
+.rep-name{font-weight:600;color:var(--pbi-navy)}
+.progress-bar{height:4px;background:var(--pbi-bg);border-radius:2px;margin-top:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;background:var(--pbi-blue)}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+.badge-pbi{font-size:9px;font-weight:600;padding:2px 7px;border-radius:2px;letter-spacing:.5px}
+.badge-won{background:rgba(16,124,16,.1);color:var(--pbi-green)}
+.badge-lost{background:rgba(216,59,1,.1);color:var(--pbi-red)}
+.badge-open{background:rgba(0,120,212,.1);color:var(--pbi-blue)}
+.badge-stale{background:rgba(255,185,0,.15);color:#7a5900}
+
+/* SQL PANEL */
+.sql-panel{background:#1e1e1e;padding:16px;font-family:var(--mono);font-size:11px;line-height:1.8;overflow-x:auto;white-space:pre}
+.sk{color:#569cd6}.sf{color:#dcdcaa}.ss{color:#ce9178}.sc{color:#6a9955;font-style:italic}.sn{color:#b5cea8}.sp{color:#9cdcfe}
+
+/* INSIGHT STRIP */
+.insight-strip{
+  background:rgba(0,120,212,.05);border:1px solid rgba(0,120,212,.2);
+  padding:10px 16px;display:flex;align-items:center;gap:10px;
+  border-left:3px solid var(--pbi-blue);
+}
+.insight-icon{font-size:14px}
+.insight-text{font-size:11px;color:var(--pbi-text);line-height:1.5}
+.insight-text strong{color:var(--pbi-navy)}
+
+/* GAUGE */
+.gauge-wrap{text-align:center;padding:8px 0}
+.gauge-val{font-size:32px;font-weight:700;color:var(--pbi-navy)}
+.gauge-label{font-size:10px;color:var(--pbi-muted);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+.gauge-sub{font-size:11px;margin-top:4px}
+
+/* WATERFALL bars */
+.wf-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.wf-label{font-size:10px;width:120px;flex-shrink:0;color:var(--pbi-muted)}
+.wf-bar-area{flex:1;height:16px;position:relative}
+.wf-bar{position:absolute;height:100%;border-radius:1px;display:flex;align-items:center;padding:0 5px}
+.wf-bar span{font-size:9px;font-weight:600;color:white;white-space:nowrap}
+.wf-total{font-size:10px;font-weight:700;color:var(--pbi-navy);width:56px;text-align:right}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.kpi-strip,.row{animation:fadeIn .4s ease both}
+.row:nth-child(2){animation-delay:.08s}
+.row:nth-child(3){animation-delay:.14s}
+.row:nth-child(4){animation-delay:.2s}
+.row:nth-child(5){animation-delay:.26s}
+</style>
+</head>
+<body>
+
+<!-- POWER BI CHROME -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="topbar-logo-icon">⚡</div>
+    Power BI
+  </div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Sales & CRM Intelligence · FY 2024</div>
+  <div class="topbar-right">
+    <div class="topbar-dot"></div>
+    <span class="topbar-badge">Live · Refreshed 09:14</span>
+    <span class="topbar-badge">Case Study 05 / 09</span>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filterbar">
+  <span class="filter-label">Filters:</span>
+  <div class="filter-chip active"><span class="filter-chip-val">FY 2024</span> <span class="filter-chip-icon">▼</span></div>
+  <div class="filter-chip active"><span class="filter-chip-val">All Regions</span> <span class="filter-chip-icon">▼</span></div>
+  <div class="filter-chip"><span class="filter-chip-val">All Reps</span> <span class="filter-chip-icon">▼</span></div>
+  <div class="filter-chip"><span class="filter-chip-val">All Products</span> <span class="filter-chip-icon">▼</span></div>
+  <div class="filter-chip"><span class="filter-chip-val">Deal Size: All</span> <span class="filter-chip-icon">▼</span></div>
+</div>
+
+<div class="canvas">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Sales Pipeline & Revenue Intelligence</h1>
+      <p>B2B SaaS · 24-rep sales team · £18.4M pipeline · CRM: Salesforce → BigQuery → Power BI</p>
+    </div>
+    <div class="page-header-right">
+      <span class="last-refresh">Last refresh: Today 09:14 AM</span>
+      <button class="refresh-btn">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Pipeline</div>
+      <div class="kpi-val">£18.4M</div>
+      <div class="kpi-trend up">▲ £2.1M <span class="kpi-vs">vs Q3</span></div>
+      <canvas class="kpi-sparkline" id="sp1"></canvas>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Revenue Closed YTD</div>
+      <div class="kpi-val">£11.2M</div>
+      <div class="kpi-trend up">▲ 94% of target</div>
+      <canvas class="kpi-sparkline" id="sp2"></canvas>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Win Rate</div>
+      <div class="kpi-val">38.4%</div>
+      <div class="kpi-trend up">▲ 3.1pp vs LY</div>
+      <canvas class="kpi-sparkline" id="sp3"></canvas>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-label">Avg Deal Size</div>
+      <div class="kpi-val">£48.2K</div>
+      <div class="kpi-trend up">▲ £6.4K vs LY</div>
+      <canvas class="kpi-sparkline" id="sp4"></canvas>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Avg Sales Cycle</div>
+      <div class="kpi-val">74 days</div>
+      <div class="kpi-trend down">▼ −8 days vs LY</div>
+      <canvas class="kpi-sparkline" id="sp5"></canvas>
+    </div>
+  </div>
+
+  <!-- ROW 1: Revenue trend + Pipeline funnel -->
+  <div class="row row-2">
+    <div class="vis">
+      <div class="vis-header">
+        <div><div class="vis-title">Monthly Revenue Closed vs Target</div><div class="vis-subtitle">Actuals, target line, and 3-month rolling forecast</div></div>
+        <div class="vis-actions"><button class="vis-btn">⋯</button><button class="vis-btn">⤢</button></div>
+      </div>
+      <div class="vis-body"><div class="chart-h240"><canvas id="revenueChart"></canvas></div></div>
+      <div class="insight-strip">
+        <span class="insight-icon">💡</span>
+        <span class="insight-text"><strong>Q4 on track:</strong> Nov closed £1.42M (+12% vs target). Dec pipeline coverage is 2.4× — highest in FY. Forecast: £11.8M FY close (104% of annual target).</span>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-header">
+        <div><div class="vis-title">Pipeline Stage Funnel</div><div class="vis-subtitle">Weighted by close probability · £18.4M total</div></div>
+        <div class="vis-actions"><button class="vis-btn">⋯</button></div>
+      </div>
+      <div class="vis-body">
+        <div id="pipelineFunnel" style="margin-top:4px"></div>
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--pbi-bg);padding:12px;border-radius:1px">
+            <div style="font-size:10px;color:var(--pbi-muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px">Weighted Pipeline</div>
+            <div style="font-size:20px;font-weight:700;color:var(--pbi-navy);margin-top:4px">£7.1M</div>
+          </div>
+          <div style="background:var(--pbi-bg);padding:12px;border-radius:1px">
+            <div style="font-size:10px;color:var(--pbi-muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px">Avg Age in Stage</div>
+            <div style="font-size:20px;font-weight:700;color:var(--pbi-navy);margin-top:4px">22 days</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Win/loss by source + Rep leaderboard -->
+  <div class="row row-equal">
+    <div class="vis">
+      <div class="vis-header">
+        <div><div class="vis-title">Win Rate by Lead Source & Deal Size</div><div class="vis-subtitle">Bubble size = total pipeline value</div></div>
+        <div class="vis-actions"><button class="vis-btn">⋯</button></div>
+      </div>
+      <div class="vis-body"><div class="chart-h260"><canvas id="winRateChart"></canvas></div></div>
+    </div>
+    <div class="vis">
+      <div class="vis-header">
+        <div><div class="vis-title">Rep Performance Leaderboard</div><div class="vis-subtitle">YTD closed vs quota · all reps</div></div>
+        <div class="vis-actions"><button class="vis-btn">⋯</button></div>
+      </div>
+      <div class="vis-body" style="padding:10px 14px">
+        <table class="pbi-table" id="repTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: SQL + Deal velocity waterfall -->
+  <div class="row row-equal">
+    <div class="vis">
+      <div class="vis-header">
+        <div><div class="vis-title">The SQL — Pipeline Velocity Query</div><div class="vis-subtitle">Salesforce → BigQuery · powers this dashboard</div></div>
+      </div>
+      <div class="sql-panel"><span class="sc">-- Pipeline velocity: deals × win rate × ACV / cycle days</span>
+<span class="sc">-- Runs nightly via Airflow, feeds Power BI dataset</span>
+
+<span class="sk">WITH</span> pipeline <span class="sk">AS</span> (
+  <span class="sk">SELECT</span>
+    o.owner_name                          <span class="sk">AS</span> rep,
+    o.lead_source,
+    o.stage_name,
+    o.amount                              <span class="sk">AS</span> acv,
+    o.close_probability                   <span class="sk">AS</span> prob,
+    <span class="sf">DATE_DIFF</span>(o.close_date,
+      o.created_date, <span class="sk">DAY</span>)             <span class="sk">AS</span> cycle_days,
+    o.amount * o.close_probability / <span class="sn">100</span> <span class="sk">AS</span> weighted_value,
+    <span class="sk">CASE WHEN</span> o.stage_name = <span class="ss">'Closed Won'</span>
+         <span class="sk">THEN</span> <span class="sn">1</span> <span class="sk">ELSE</span> <span class="sn">0</span>
+    <span class="sk">END</span>                                   <span class="sk">AS</span> is_won
+  <span class="sk">FROM</span> salesforce.opportunities o
+  <span class="sk">WHERE</span> o.fiscal_year = <span class="sn">2024</span>
+    <span class="sk">AND</span> o.is_deleted = <span class="sk">FALSE</span>
+),
+velocity <span class="sk">AS</span> (
+  <span class="sk">SELECT</span>
+    rep,
+    lead_source,
+    <span class="sf">COUNT</span>(*)                        <span class="sk">AS</span> n_deals,
+    <span class="sf">ROUND</span>(<span class="sf">AVG</span>(is_won)*<span class="sn">100</span>,<span class="sn">1</span>)       <span class="sk">AS</span> win_rate_pct,
+    <span class="sf">ROUND</span>(<span class="sf">AVG</span>(acv),<span class="sn">0</span>)              <span class="sk">AS</span> avg_acv,
+    <span class="sf">ROUND</span>(<span class="sf">AVG</span>(cycle_days),<span class="sn">0</span>)       <span class="sk">AS</span> avg_cycle,
+    <span class="sf">SUM</span>(weighted_value)            <span class="sk">AS</span> weighted_pipe,
+    <span class="sc">-- Pipeline velocity formula</span>
+    <span class="sf">ROUND</span>(
+      <span class="sf">COUNT</span>(*) * <span class="sf">AVG</span>(is_won)
+      * <span class="sf">AVG</span>(acv)
+      / <span class="sf">NULLIF</span>(<span class="sf">AVG</span>(cycle_days),<span class="sn">0</span>)
+    ,<span class="sn">0</span>)                              <span class="sk">AS</span> velocity_per_day
+  <span class="sk">FROM</span> pipeline
+  <span class="sk">GROUP BY</span> <span class="sn">1</span>,<span class="sn">2</span>
+)
+<span class="sk">SELECT</span> * <span class="sk">FROM</span> velocity
+<span class="sk">ORDER BY</span> weighted_pipe <span class="sk">DESC</span></div>
+    </div>
+    <div class="vis">
+      <div class="vis-header">
+        <div><div class="vis-title">Revenue Waterfall — FY 2024</div><div class="vis-subtitle">Opening pipeline → closes → losses → forecast</div></div>
+        <div class="vis-actions"><button class="vis-btn">⋯</button></div>
+      </div>
+      <div class="vis-body">
+        <div class="chart-h200"><canvas id="waterfallChart"></canvas></div>
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div style="text-align:center;padding:10px;background:rgba(16,124,16,.06);border:1px solid rgba(16,124,16,.2)">
+            <div style="font-size:9px;color:var(--pbi-muted);text-transform:uppercase;letter-spacing:.8px">New Logo</div>
+            <div style="font-size:18px;font-weight:700;color:var(--pbi-green)">£6.2M</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:rgba(0,120,212,.06);border:1px solid rgba(0,120,212,.2)">
+            <div style="font-size:9px;color:var(--pbi-muted);text-transform:uppercase;letter-spacing:.8px">Expansion</div>
+            <div style="font-size:18px;font-weight:700;color:var(--pbi-blue)">£3.8M</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:rgba(216,59,1,.06);border:1px solid rgba(216,59,1,.2)">
+            <div style="font-size:9px;color:var(--pbi-muted);text-transform:uppercase;letter-spacing:.8px">Churned ARR</div>
+            <div style="font-size:18px;font-weight:700;color:var(--pbi-red)">−£1.2M</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="border:1px solid var(--pbi-border);background:var(--pbi-white);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div style="font-size:10px;color:var(--pbi-dim)">Case Study 05 / 09 · Sales & CRM Analytics · Tools: SQL (BigQuery) · Power BI · Salesforce · Python (pipeline automation)</div>
+    <div style="display:flex;gap:8px">
+      <a href="00_portfolio_home.html" style="font-size:10px;color:var(--pbi-blue);text-decoration:none;border:1px solid var(--pbi-blue);padding:5px 12px">← Portfolio</a>
+      <a href="06_hr_people_analytics.html" style="font-size:10px;color:var(--pbi-blue);text-decoration:none;border:1px solid var(--pbi-blue);padding:5px 12px">Next: HR Analytics →</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const BLUE='#0078d4',GREEN='#107c10',RED='#d83b01',YELLOW='#ffb900',TEAL='#00b4d8',NAVY='#004578',MUTED='#605e5c',BORDER='#edebe9',BG='#f3f2f1';
+const sans={family:'IBM Plex Sans',size:10};
+const baseGrid={color:'rgba(0,0,0,.05)'};
+
+// Sparklines
+function spark(id,data,color){
+  new Chart(document.getElementById(id),{type:'line',data:{labels:data.map((_,i)=>i),datasets:[{data,borderColor:color,borderWidth:1.5,pointRadius:0,fill:true,backgroundColor:color+'15',tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
+}
+spark('sp1',[8.2,9.1,10.4,11.8,12.1,13.4,14.2,15.8,16.4,17.1,17.8,18.4],BLUE);
+spark('sp2',[0.6,1.2,2.1,3.4,4.8,5.9,7.1,8.0,9.1,10.1,10.8,11.2],GREEN);
+spark('sp3',[32,33,31,34,35,36,35,37,38,37,39,38.4],YELLOW);
+spark('sp4',[36,38,40,41,42,43,44,45,46,47,47.5,48.2],TEAL);
+spark('sp5',[88,86,85,83,82,80,79,78,77,76,75,74],RED);
+
+// Monthly revenue
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const actual=[820,940,1050,870,1120,980,1210,1080,1340,1180,1420,null];
+const target=Array(12).fill(990);
+const forecast=[null,null,null,null,null,null,null,null,null,null,1420,1480];
+new Chart(document.getElementById('revenueChart'),{
+  type:'bar',
+  data:{labels:months,datasets:[
+    {label:'Closed (£K)',data:actual,backgroundColor:actual.map((v,i)=>v&&v>=target[i]?'rgba(16,124,16,.75)':'rgba(216,59,1,.65)'),borderRadius:2,order:2},
+    {label:'Target',data:target,type:'line',borderColor:NAVY,borderDash:[4,3],pointRadius:0,borderWidth:1.5,fill:false,order:1},
+    {label:'Forecast',data:forecast,type:'line',borderColor:BLUE,borderDash:[2,2],pointRadius:4,borderWidth:1.5,fill:false,order:0,pointStyle:'triangle'},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:12}}},scales:{x:{ticks:{color:MUTED,font:sans},grid:{display:false}},y:{ticks:{color:MUTED,font:sans,callback:v=>'£'+(v/1000).toFixed(1)+'M'},grid:baseGrid}}}
+});
+
+// Pipeline funnel
+const stages=[
+  {name:'Prospecting',val:5840,pct:100,prob:10,color:BLUE+'cc'},
+  {name:'Qualification',val:4210,pct:72,prob:20,color:BLUE+'bb'},
+  {name:'Proposal',val:3180,pct:54,prob:40,color:TEAL+'cc'},
+  {name:'Negotiation',val:2240,pct:38,prob:70,color:GREEN+'aa'},
+  {name:'Closing',val:960,pct:16,prob:90,color:GREEN+'cc'},
+];
+const pf=document.getElementById('pipelineFunnel');
+stages.forEach(s=>{
+  pf.innerHTML+=`<div class="pipe-stage">
+    <div class="pipe-label">${s.name}</div>
+    <div class="pipe-bar-wrap"><div class="pipe-bar" id="pb_${s.name}" style="width:0%;background:${s.color}"><span>£${(s.val/1000).toFixed(1)}M</span></div></div>
+    <div class="pipe-pct">${s.prob}%</div>
+    <div class="pipe-count">${s.pct}%</div>
+  </div>`;
+});
+setTimeout(()=>stages.forEach(s=>document.getElementById(`pb_${s.name}`).style.width=s.pct+'%'),200);
+
+// Win rate bubble chart
+new Chart(document.getElementById('winRateChart'),{
+  type:'bubble',
+  data:{datasets:[
+    {label:'Inbound',data:[{x:22,y:52,r:18}],backgroundColor:'rgba(0,120,212,.65)'},
+    {label:'Outbound SDR',data:[{x:38,y:31,r:14}],backgroundColor:'rgba(0,180,216,.65)'},
+    {label:'Partner Ref.',data:[{x:44,y:61,r:22}],backgroundColor:'rgba(16,124,16,.65)'},
+    {label:'Event/Webinar',data:[{x:55,y:44,r:10}],backgroundColor:'rgba(255,185,0,.8)'},
+    {label:'Content/SEO',data:[{x:31,y:38,r:8}],backgroundColor:'rgba(92,45,145,.65)'},
+    {label:'Cold Outreach',data:[{x:62,y:18,r:6}],backgroundColor:'rgba(216,59,1,.65)'},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:MUTED,font:sans,boxWidth:10}}},scales:{x:{ticks:{color:MUTED,font:sans,callback:v=>'£'+v+'K'},title:{display:true,text:'Avg Deal Size (£K)',color:MUTED,font:sans},grid:baseGrid},y:{ticks:{color:MUTED,font:sans,callback:v=>v+'%'},title:{display:true,text:'Win Rate %',color:MUTED,font:sans},grid:baseGrid}}}
+});
+
+// Rep table
+const reps=[
+  {name:'Sarah Chen',quota:1200,closed:1380,rate:52,status:'Closed Won'},
+  {name:'James Okafor',quota:1000,closed:1080,rate:48,status:'Closed Won'},
+  {name:'Priya Mehta',quota:900,closed:920,rate:41,status:'Closed Won'},
+  {name:'Tom Rafferty',quota:1100,closed:980,rate:36,status:'At Risk'},
+  {name:'Lisa Nakamura',quota:800,closed:740,rate:33,status:'At Risk'},
+  {name:'Dave Singh',quota:750,closed:580,rate:28,status:'Below'},
+];
+const rt=document.getElementById('repTable');
+rt.innerHTML=`<thead><tr><th>Rep</th><th>Quota</th><th>Closed</th><th>vs Quota</th><th>Win Rate</th><th>Status</th></tr></thead><tbody>`;
+reps.forEach(r=>{
+  const attain=Math.round(r.closed/r.quota*100);
+  const bc=attain>=100?GREEN:attain>=85?YELLOW:RED;
+  rt.querySelector('tbody').innerHTML+=`<tr>
+    <td><span class="rep-name">${r.name}</span></td>
+    <td style="color:${MUTED}">£${r.quota}K</td>
+    <td style="font-weight:600">£${r.closed}K</td>
+    <td><div style="font-size:11px;font-weight:700;color:${bc}">${attain}%</div><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(attain,100)}%;background:${bc}"></div></div></td>
+    <td style="font-weight:600;color:${NAVY}">${r.rate}%</td>
+    <td><span class="badge-pbi ${attain>=100?'badge-won':attain>=85?'badge-stale':'badge-lost'}">${attain>=100?'On Track':attain>=85?'At Risk':'Behind'}</span></td>
+  </tr>`;
+});
+
+// Waterfall
+new Chart(document.getElementById('waterfallChart'),{
+  type:'bar',
+  data:{labels:['Opening\nPipeline','New\nDeals In','Closed\nWon','Closed\nLost','Slipped','Current\nPipeline'],
+    datasets:[{
+      data:[9200,6800,11200,4200,2400,18400],
+      backgroundColor:['rgba(0,69,120,.7)','rgba(0,120,212,.7)','rgba(16,124,16,.7)','rgba(216,59,1,.7)','rgba(255,185,0,.8)','rgba(0,69,120,.85)'],
+      borderRadius:2,
+    }]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:MUTED,font:{...sans,size:9}},grid:{display:false}},y:{ticks:{color:MUTED,font:sans,callback:v=>'£'+(v/1000).toFixed(0)+'M'},grid:baseGrid}}}
+});
+</script>
+</body>
+</html>

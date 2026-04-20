@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Analytics · User Retention & Feature Adoption</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c12;--surface:#0d1320;--surface2:#111827;--lift:#161e2e;
+  --border:#1e293b;--border2:#263044;
+  --cyan:#00d4ff;--lime:#a3e635;--orange:#fb923c;--red:#f87171;
+  --text:#e2e8f0;--muted:#64748b;--dim:#334155;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-display:'Syne',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);font-size:13px;min-height:100vh}
+
+/* GRID BACKGROUND */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+
+/* HEADER */
+.header{
+  position:relative;z-index:1;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,12,18,.9);
+  backdrop-filter:blur(12px);
+  padding:32px 40px;
+}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px}
+.eyebrow{
+  font-size:10px;letter-spacing:3px;color:var(--cyan);
+  text-transform:uppercase;margin-bottom:12px;
+}
+.header h1{
+  font-family:var(--font-display);font-size:clamp(28px,4vw,48px);
+  font-weight:800;line-height:1.1;
+}
+.header h1 span{color:var(--cyan)}
+.header-meta{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.8}
+.header-kpis{display:flex;gap:0;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.hkpi{
+  padding:16px 24px;border-right:1px solid var(--border);text-align:center;
+  min-width:110px;
+}
+.hkpi:last-child{border-right:none}
+.hkpi-val{font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--cyan)}
+.hkpi-val.lime{color:var(--lime)}
+.hkpi-val.orange{color:var(--orange)}
+.hkpi-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px}
+
+/* LAYOUT */
+.page{max-width:1240px;margin:0 auto;padding:36px 40px;position:relative;z-index:1}
+.section{margin-bottom:40px}
+.section-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+  padding-bottom:12px;border-bottom:1px solid var(--border);
+}
+.section-num{
+  font-size:10px;color:var(--cyan);letter-spacing:2px;
+  border:1px solid var(--cyan);padding:2px 6px;border-radius:2px;
+}
+.section-title{font-family:var(--font-display);font-size:16px;font-weight:700}
+.section-desc{font-size:11px;color:var(--muted);margin-left:auto}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid-51{display:grid;grid-template-columns:5fr 4fr;gap:16px}
+
+/* CARDS */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:4px;padding:22px;
+  position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--cyan),transparent);
+}
+.card.lime::before{background:linear-gradient(90deg,var(--lime),transparent)}
+.card.orange::before{background:linear-gradient(90deg,var(--orange),transparent)}
+.card.red::before{background:linear-gradient(90deg,var(--red),transparent)}
+.card-label{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:16px;
+}
+.card-val{font-family:var(--font-display);font-size:32px;font-weight:700;color:var(--cyan)}
+.card-val.lime{color:var(--lime)}
+.card-val.orange{color:var(--orange)}
+.card-delta{font-size:11px;margin-top:6px}
+.card-delta.pos{color:var(--lime)}
+.card-delta.neg{color:var(--red)}
+.chart-wrap{height:220px;position:relative}
+.chart-wrap.sm{height:170px}
+.chart-wrap.tall{height:280px}
+
+/* CODE */
+.code{
+  background:#050810;border:1px solid var(--border);border-radius:4px;
+  padding:18px 20px;font-family:var(--font-mono);font-size:11.5px;
+  line-height:1.9;overflow-x:auto;white-space:pre;
+  border-left:2px solid var(--cyan);
+}
+.ck{color:#7dd3fc}  /* keyword */
+.cf{color:#86efac}  /* function */
+.cs{color:#fde68a}  /* string */
+.cc{color:#334155;font-style:italic} /* comment */
+.cn{color:#f9a8d4}  /* number */
+.cm{color:#00d4ff}  /* method */
+
+/* RETENTION HEATMAP */
+.heat-wrap{overflow-x:auto}
+.heat-table{border-collapse:collapse;width:100%;min-width:500px}
+.heat-table th{
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);padding:6px 10px;font-weight:500;text-align:center;
+}
+.heat-table th:first-child{text-align:left}
+.heat-table td{
+  padding:8px 10px;text-align:center;font-size:11px;font-weight:500;
+  border:1px solid var(--bg);border-radius:2px;
+  transition:transform .15s;cursor:default;
+}
+.heat-table td:first-child{
+  text-align:left;color:var(--muted);font-size:10px;
+  background:transparent!important;border:none;
+}
+.heat-table td:hover{transform:scale(1.1);z-index:2;position:relative}
+
+/* FEATURE TABLE */
+.feat-table{width:100%;border-collapse:collapse}
+.feat-table th{
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);
+  text-align:left;
+}
+.feat-table td{padding:10px 12px;border-bottom:1px solid var(--border2);font-size:12px}
+.feat-table tr:hover td{background:var(--lift)}
+.adoption-bar{
+  height:6px;background:var(--border);border-radius:3px;
+  overflow:hidden;margin-top:4px;
+}
+.adoption-fill{height:100%;border-radius:3px;background:var(--cyan)}
+
+/* BADGE */
+.badge{
+  display:inline-block;font-size:9px;letter-spacing:1px;
+  text-transform:uppercase;padding:2px 7px;border-radius:2px;font-weight:700;
+}
+.badge-cyan{background:rgba(0,212,255,.15);color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+.badge-lime{background:rgba(163,230,53,.12);color:var(--lime);border:1px solid rgba(163,230,53,.3)}
+.badge-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.badge-red{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+
+/* INSIGHT */
+.insight{
+  background:var(--lift);border:1px solid var(--border2);
+  border-left:2px solid var(--cyan);border-radius:0 4px 4px 0;
+  padding:14px 16px;margin-top:16px;
+}
+.insight.lime{border-left-color:var(--lime)}
+.insight.orange{border-left-color:var(--orange)}
+.insight-title{color:var(--cyan);font-size:11px;font-weight:500;margin-bottom:6px}
+.insight.lime .insight-title{color:var(--lime)}
+.insight.orange .insight-title{color:var(--orange)}
+.insight p{font-size:11px;color:var(--muted);line-height:1.65}
+
+/* TAGS */
+.tool-tags{display:flex;gap:8px;flex-wrap:wrap;padding:16px 40px;
+  border-top:1px solid var(--border);background:var(--surface)}
+.tool-tag{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);border:1px solid var(--border2);padding:4px 10px;border-radius:2px}
+
+.footer{
+  border-top:1px solid var(--border);padding:20px 40px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:12px;position:relative;z-index:1;
+}
+.footer p{font-size:10px;color:var(--muted)}
+.footer-nav{display:flex;gap:10px}
+.footer-nav a{
+  font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--cyan);text-decoration:none;border:1px solid rgba(0,212,255,.3);
+  padding:7px 14px;border-radius:3px;transition:background .2s;
+}
+.footer-nav a:hover{background:rgba(0,212,255,.1)}
+
+@keyframes scanline{from{transform:translateY(-100%)}to{transform:translateY(100vh)}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <div>
+      <div class="eyebrow">// case_study_02 · Product Analytics</div>
+      <h1>User <span>Retention</span> &<br>Feature Adoption</h1>
+      <div class="header-meta">
+        SaaS B2B · 12,400 MAU · Cohort analysis across 6 product areas<br>
+        Period: Jan–Dec 2024 · Stack: Python, SQL, Mixpanel, Amplitude
+      </div>
+    </div>
+    <div class="header-kpis">
+      <div class="hkpi"><div class="hkpi-val">12.4K</div><div class="hkpi-label">MAU</div></div>
+      <div class="hkpi"><div class="hkpi-val lime">42%</div><div class="hkpi-label">D30 Retention</div></div>
+      <div class="hkpi"><div class="hkpi-val orange">18.2%</div><div class="hkpi-label">Monthly Churn</div></div>
+      <div class="hkpi"><div class="hkpi-val" style="color:#f9a8d4">4.6×</div><div class="hkpi-label">NPS Drivers</div></div>
+    </div>
+  </div>
+  <div class="tool-tags" style="padding:12px 0 0;border:none;background:transparent">
+    <span class="tool-tag" style="color:var(--cyan);border-color:rgba(0,212,255,.3)">Python · pandas / numpy</span>
+    <span class="tool-tag">SQL · Redshift</span>
+    <span class="tool-tag">Mixpanel</span>
+    <span class="tool-tag">Amplitude</span>
+    <span class="tool-tag">Excel pivot tables</span>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- RETENTION OVERVIEW -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">Retention Cohort Analysis</span>
+      <span class="section-desc">D1 / D7 / D30 / D90 by signup month</span>
+    </div>
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="card"><div class="card-label">D1 Retention</div><div class="card-val lime">78.4%</div><div class="card-delta pos">↑ 3.2pp vs prior period</div></div>
+      <div class="card lime"><div class="card-label">D7 Retention</div><div class="card-val lime">58.1%</div><div class="card-delta pos">↑ 1.8pp vs prior period</div></div>
+      <div class="card orange"><div class="card-label">D30 Retention</div><div class="card-val orange">42.0%</div><div class="card-delta neg">↓ 0.6pp vs prior period</div></div>
+      <div class="card red"><div class="card-label">D90 Retention</div><div class="card-val" style="color:var(--red)">28.3%</div><div class="card-delta neg">↓ 1.1pp vs prior period</div></div>
+    </div>
+
+    <div class="grid-51">
+      <div class="card">
+        <div class="card-label">Retention Heatmap · By Signup Cohort × Week</div>
+        <div class="heat-wrap" style="margin-top:8px">
+          <table class="heat-table" id="heatTable"></table>
+        </div>
+        <div class="insight">
+          <div class="insight-title">// FINDING: Week 3 Cliff</div>
+          <p>Across all cohorts, Week 3 shows the steepest drop (avg −14pp). This correlates with the end of the onboarding email sequence. Extending the sequence to 28 days is the top experiment in the roadmap.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">D30 Retention Trend · All Cohorts</div>
+        <div class="chart-wrap">
+          <canvas id="retentionTrend"></canvas>
+        </div>
+        <div class="insight lime" style="margin-top:16px">
+          <div class="insight-title">// Python: Cohort Builder</div>
+          <p>Built a reusable cohort analysis class in pandas that any PM can run with a single function call — reduced ad-hoc retention queries from 2 hours to 3 minutes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PYTHON CODE -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">The Python — Cohort Retention Engine</span>
+      <span class="section-desc">pandas · reusable class · used by 4 PMs</span>
+    </div>
+    <div class="grid-2">
+      <div class="code"><span class="cc"># cohort_analysis.py — reusable retention engine</span>
+<span class="cc"># Reduced ad-hoc analysis time: 2hrs → 3 mins</span>
+
+<span class="ck">import</span> pandas <span class="ck">as</span> pd
+<span class="ck">import</span> numpy <span class="ck">as</span> np
+
+<span class="ck">class</span> <span class="cf">CohortRetentionAnalyser</span>:
+  <span class="ck">def</span> <span class="cf">__init__</span>(self, events_df: pd.DataFrame):
+    <span class="cc"># expects: user_id, event_date, signup_date</span>
+    self.df = events_df.copy()
+    self.df[<span class="cs">'signup_month'</span>] = pd.to_datetime(
+      self.df[<span class="cs">'signup_date'</span>]
+    ).dt.to_period(<span class="cs">'M'</span>)
+    self.df[<span class="cs">'days_since_signup'</span>] = (
+      pd.to_datetime(self.df[<span class="cs">'event_date'</span>])
+      - pd.to_datetime(self.df[<span class="cs">'signup_date'</span>])
+    ).dt.days
+
+  <span class="ck">def</span> <span class="cf">build_cohort_matrix</span>(
+      self, periods=[<span class="cn">1</span>,<span class="cn">7</span>,<span class="cn">14</span>,<span class="cn">30</span>,<span class="cn">60</span>,<span class="cn">90</span>]
+  ) -> pd.DataFrame:
+    <span class="cc"># Count users active within N days of signup</span>
+    cohort_sizes = (
+      self.df.<span class="cm">groupby</span>(<span class="cs">'signup_month'</span>)[<span class="cs">'user_id'</span>]
+             .<span class="cm">nunique</span>()
+             .<span class="cm">rename</span>(<span class="cs">'cohort_size'</span>)
+    )
+    matrix = {}
+    <span class="ck">for</span> p <span class="ck">in</span> periods:
+      active = (
+        self.df[self.df[<span class="cs">'days_since_signup'</span>] <= p]
+            .<span class="cm">groupby</span>(<span class="cs">'signup_month'</span>)[<span class="cs">'user_id'</span>]
+            .<span class="cm">nunique</span>()
+      )
+      matrix[<span class="cs">f'D{p}'</span>] = (active / cohort_sizes * <span class="cn">100</span>).<span class="cm">round</span>(<span class="cn">1</span>)
+    <span class="ck">return</span> pd.<span class="cm">DataFrame</span>(matrix)
+
+  <span class="ck">def</span> <span class="cf">find_dropoff_cliff</span>(self) -> dict:
+    <span class="cc"># Identify the period with steepest avg retention drop</span>
+    m = self.<span class="cm">build_cohort_matrix</span>()
+    diffs = m.<span class="cm">diff</span>(axis=<span class="cn">1</span>).<span class="cm">mean</span>()
+    cliff = diffs.<span class="cm">idxmin</span>()
+    <span class="ck">return</span> {<span class="cs">'cliff_period'</span>: cliff,
+            <span class="cs">'avg_drop_pp'</span>: <span class="cm">round</span>(diffs[cliff], <span class="cn">1</span>)}</div>
+
+      <div>
+        <div class="code"><span class="cc">-- SQL: Feature activation within first 7 days</span>
+<span class="cc">-- Used to identify "power features" correlated</span>
+<span class="cc">-- with D30 retention (activation metric framework)</span>
+
+<span class="ck">WITH</span> new_users <span class="ck">AS</span> (
+  <span class="ck">SELECT</span> user_id, signup_date
+  <span class="ck">FROM</span> users
+  <span class="ck">WHERE</span> signup_date >= <span class="cs">'2024-01-01'</span>
+),
+feature_activations <span class="ck">AS</span> (
+  <span class="ck">SELECT</span>
+    e.user_id,
+    e.feature_name,
+    <span class="ck">MIN</span>(e.event_date) <span class="ck">AS</span> first_used,
+    <span class="ck">DATE_DIFF</span>(
+      <span class="ck">MIN</span>(e.event_date),
+      u.signup_date, <span class="ck">DAY</span>
+    ) <span class="ck">AS</span> days_to_activate
+  <span class="ck">FROM</span> events e
+  <span class="ck">JOIN</span> new_users u <span class="ck">USING</span>(user_id)
+  <span class="ck">WHERE</span> e.event_date <span class="ck">BETWEEN</span>
+        u.signup_date
+    <span class="ck">AND</span> u.signup_date + <span class="ck">INTERVAL</span> <span class="cn">7</span> <span class="ck">DAY</span>
+  <span class="ck">GROUP BY</span> <span class="cn">1</span>,<span class="cn">2</span>
+),
+retained <span class="ck">AS</span> (
+  <span class="ck">SELECT DISTINCT</span> user_id
+  <span class="ck">FROM</span> events
+  <span class="ck">WHERE</span> <span class="ck">DATE_DIFF</span>(event_date,
+    (<span class="ck">SELECT</span> signup_date <span class="ck">FROM</span> new_users
+     <span class="ck">WHERE</span> user_id = events.user_id),
+    <span class="ck">DAY</span>) <span class="ck">BETWEEN</span> <span class="cn">25</span> <span class="ck">AND</span> <span class="cn">35</span>
+)
+<span class="ck">SELECT</span>
+  fa.feature_name,
+  <span class="ck">COUNT</span>(DISTINCT fa.user_id)    <span class="ck">AS</span> activated_users,
+  <span class="ck">COUNT</span>(DISTINCT r.user_id)     <span class="ck">AS</span> retained_users,
+  <span class="ck">ROUND</span>(<span class="ck">COUNT</span>(DISTINCT r.user_id)
+    * <span class="cn">100.0</span>
+    / <span class="ck">COUNT</span>(DISTINCT fa.user_id),<span class="cn">1</span>) <span class="ck">AS</span> retention_rate
+<span class="ck">FROM</span> feature_activations fa
+<span class="ck">LEFT JOIN</span> retained r <span class="ck">USING</span>(user_id)
+<span class="ck">GROUP BY</span> <span class="cn">1</span>
+<span class="ck">ORDER BY</span> retention_rate <span class="ck">DESC</span></div>
+        <div class="insight lime" style="margin-top:12px">
+          <div class="insight-title">// KEY INSIGHT: "Power Feature" Discovery</div>
+          <p>Users who activate the <strong style="color:var(--lime)">Team Collaboration</strong> feature within 7 days retain at 71% vs 28% for non-activators. This became the primary onboarding activation metric — now tracked as a north-star input KPI.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE ADOPTION -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Feature Adoption vs D30 Retention Correlation</span>
+      <span class="section-desc">power feature analysis · n=4,820 users</span>
+    </div>
+    <div class="grid-51">
+      <div class="card">
+        <div class="card-label">Feature Adoption Rate × D30 Retention Rate</div>
+        <table class="feat-table">
+          <thead>
+            <tr><th>Feature</th><th>Adoption %</th><th>D30 Retention if Used</th><th>D30 if NOT Used</th><th>Lift</th><th>Priority</th></tr>
+          </thead>
+          <tbody id="featureTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-label">Scatter: Activation Rate vs Retention Lift</div>
+        <div class="chart-wrap tall">
+          <canvas id="scatterChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT FUNNEL & DROP-OFF -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">Onboarding Funnel Drop-off & Experiments</span>
+      <span class="section-desc">Mixpanel events · 90-day window</span>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Onboarding Step Completion Rate</div>
+        <div class="chart-wrap tall">
+          <canvas id="funnelChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">A/B Test Results · Onboarding Flow</div>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px">
+          <div style="border:1px solid var(--border2);border-radius:3px;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:11px;color:var(--lime);font-weight:600">✓ WINNER — Interactive Tutorial</span>
+              <span class="badge badge-lime">+24% CVR</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7">Replaced 5-step text onboarding with interactive product tour. Stat sig at 95% (p=0.031). D7 retention: <strong style="color:var(--lime)">64%</strong> vs 52% control. Rolled out to 100% of new signups.</div>
+          </div>
+          <div style="border:1px solid var(--border2);border-radius:3px;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:11px;color:var(--orange);font-weight:600">~ INCONCLUSIVE — Checklist UI</span>
+              <span class="badge badge-orange">+3% CVR</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7">Onboarding checklist vs. progress bar. Not stat sig (p=0.24). Requires 3× more traffic. Extended test for 60 more days before decision.</div>
+          </div>
+          <div style="border:1px solid var(--border2);border-radius:3px;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:11px;color:var(--red);font-weight:600">✗ LOSER — Forced Feature Tour</span>
+              <span class="badge badge-red">−8% CVR</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7">Mandatory 8-step modal sequence before dashboard access. Users rage-quit at step 3. Immediate rollback. Qualitative: users felt "trapped." Skip logic is mandatory.</div>
+          </div>
+        </div>
+        <div class="insight orange" style="margin-top:16px">
+          <div class="insight-title">// BUSINESS IMPACT</div>
+          <p>Interactive tutorial rollout projected to improve MRR by £18K/month by reducing early churn — equivalent to acquiring 420 additional paying users at current CAC.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div>
+    <p>Case Study 02 / 04 · Product Analytics · SaaS B2B</p>
+    <p style="margin-top:3px">Stack: Python (pandas, numpy) · SQL (Redshift) · Mixpanel · Amplitude · Excel</p>
+  </div>
+  <div class="footer-nav">
+    <a href="01_marketing_analytics.html">← Marketing</a>
+    <a href="03_finance_analytics.html">Finance →</a>
+  </div>
+</footer>
+
+<script>
+const CYAN='#00d4ff',LIME='#a3e635',ORANGE='#fb923c',RED='#f87171',MUTED='#64748b',BORDER='#1e293b';
+const mono={family:'JetBrains Mono',size:10};
+const baseOpts={
+  responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{labels:{color:MUTED,font:mono}}},
+  scales:{
+    x:{ticks:{color:MUTED,font:mono},grid:{color:'rgba(255,255,255,.04)'}},
+    y:{ticks:{color:MUTED,font:mono},grid:{color:'rgba(255,255,255,.04)'}},
+  }
+};
+
+// Heatmap
+const cohorts=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'];
+const wks=['D1','D3','D7','D14','D21','D30','D60','D90'];
+const heatData=[
+  [78,71,62,54,48,42,35,28],[80,73,64,56,50,44,36,29],[77,70,61,52,46,41,33,27],
+  [82,75,66,58,52,46,38,31],[79,72,63,55,49,43,35,29],[84,77,68,60,54,48,40,33],
+  [81,74,65,57,51,45,37,30],[83,76,67,59,53,47,39,32],[85,78,69,61,55,49,41,34],
+  [82,75,66,58,52,46,38,31],[86,79,70,62,56,50,42,35]
+];
+function heatColor(v){
+  if(v>=70)return`rgba(163,230,53,${.15+v/200})`;
+  if(v>=50)return`rgba(0,212,255,${.1+v/300})`;
+  if(v>=35)return`rgba(251,146,60,${.12+v/250})`;
+  return`rgba(248,113,113,${.12+v/250})`;
+}
+const ht=document.getElementById('heatTable');
+ht.innerHTML=`<tr><th></th>${wks.map(w=>`<th>${w}</th>`).join('')}</tr>`;
+cohorts.forEach((c,i)=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${c}</td>${heatData[i].map(v=>`<td style="background:${heatColor(v)};color:${v>=50?'rgba(255,255,255,.9)':'rgba(255,255,255,.6)'}">${v}%</td>`).join('')}`;
+  ht.appendChild(tr);
+});
+
+// Retention trend
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+new Chart(document.getElementById('retentionTrend'),{
+  type:'line',
+  data:{labels:months,datasets:[
+    {label:'D30 Retention %',data:[38,39,37,41,40,43,42,44,43,46,45,47],borderColor:LIME,backgroundColor:'rgba(163,230,53,.08)',fill:true,tension:.4,pointRadius:3,borderWidth:2},
+    {label:'Target (45%)',data:Array(12).fill(45),borderColor:CYAN,borderDash:[4,4],pointRadius:0,borderWidth:1,fill:false},
+  ]},
+  options:{...baseOpts,scales:{...baseOpts.scales,y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>v+'%'},min:30,max:50}}}
+});
+
+// Feature table
+const features=[
+  {name:'Team Collaboration',adoption:34,retUsed:71,retNot:28,lift:'+43pp',badge:'badge-lime',label:'Critical'},
+  {name:'Dashboard Builder',adoption:58,retUsed:64,retNot:31,lift:'+33pp',badge:'badge-lime',label:'Critical'},
+  {name:'API Integration',adoption:22,retUsed:68,retNot:38,lift:'+30pp',badge:'badge-lime',label:'Power'},
+  {name:'Email Reports',adoption:71,retUsed:55,retNot:29,lift:'+26pp',badge:'badge-cyan',label:'High'},
+  {name:'Mobile App',adoption:45,retUsed:51,retNot:33,lift:'+18pp',badge:'badge-cyan',label:'High'},
+  {name:'CSV Export',adoption:83,retUsed:44,retNot:36,lift:'+8pp',badge:'badge-orange',label:'Medium'},
+  {name:'Custom Branding',adoption:19,retUsed:46,retNot:40,lift:'+6pp',badge:'badge-orange',label:'Low'},
+];
+const ft=document.getElementById('featureTable');
+features.forEach(f=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
+    <td style="font-weight:500">${f.name}</td>
+    <td><div style="font-size:11px">${f.adoption}%</div><div class="adoption-bar"><div class="adoption-fill" style="width:${f.adoption}%"></div></div></td>
+    <td style="color:${LIME};font-weight:600">${f.retUsed}%</td>
+    <td style="color:${RED}">${f.retNot}%</td>
+    <td style="color:${LIME};font-weight:700">${f.lift}</td>
+    <td><span class="badge ${f.badge}">${f.label}</span></td>
+  `;
+  ft.appendChild(tr);
+});
+
+// Scatter
+new Chart(document.getElementById('scatterChart'),{
+  type:'scatter',
+  data:{datasets:[
+    {label:'Features',data:features.map(f=>({x:f.adoption,y:parseInt(f.lift)})),backgroundColor:features.map(f=>f.badge.includes('lime')?LIME:f.badge.includes('cyan')?CYAN:ORANGE),pointRadius:8},
+  ]},
+  options:{...baseOpts,plugins:{...baseOpts.plugins,tooltip:{callbacks:{label:c=>{const f=features[c.dataIndex];return`${f.name}: ${c.raw.y}pp lift`}}}},
+    scales:{
+      x:{...baseOpts.scales.x,title:{display:true,text:'Adoption Rate (%)',color:MUTED,font:mono}},
+      y:{...baseOpts.scales.y,title:{display:true,text:'Retention Lift (pp)',color:MUTED,font:mono}},
+    }
+  }
+});
+
+// Funnel
+const steps=['Signup','Email Verify','Profile Setup','First Import','First Feature','Invite Team','Day 7 Active'];
+const vals=[100,88,74,61,52,38,42];
+new Chart(document.getElementById('funnelChart'),{
+  type:'bar',
+  data:{labels:steps,datasets:[{
+    label:'% Completing Step',
+    data:vals,
+    backgroundColor:vals.map(v=>v>=70?'rgba(163,230,53,.7)':v>=50?'rgba(0,212,255,.7)':v>=38?'rgba(251,146,60,.7)':'rgba(248,113,113,.7)'),
+    borderRadius:3,
+  }]},
+  options:{
+    ...baseOpts,indexAxis:'y',
+    scales:{
+      x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,callback:v=>v+'%'},min:0,max:110},
+      y:{...baseOpts.scales.y,ticks:{color:MUTED,font:{...mono,size:11}}},
+    }
+  }
+});
+</script>
+</body>
+</html>

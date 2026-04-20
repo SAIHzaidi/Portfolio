@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketing Analytics · Campaign Performance Deep Dive</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#faf7f2;--warm:#f5ede0;--paper:#fffcf8;
+  --ink:#1a1410;--rust:#c4520a;--gold:#d4922a;--sage:#4a7c59;
+  --muted:#8a7968;--border:#e8ddd0;
+  --font-display:'Playfair Display',Georgia,serif;
+  --font-body:'Lato',system-ui,sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--cream);color:var(--ink);font-family:var(--font-body);font-weight:300;line-height:1.6}
+
+/* HEADER */
+.masthead{
+  background:var(--ink);color:var(--cream);
+  padding:0 48px;
+  display:flex;align-items:stretch;justify-content:space-between;
+  border-bottom:3px solid var(--rust);
+  position:relative;overflow:hidden;
+}
+.masthead::before{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.03) 39px,rgba(255,255,255,.03) 40px);
+}
+.masthead-left{padding:36px 0;position:relative}
+.masthead-eyebrow{
+  font-family:var(--font-body);font-size:10px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--rust);margin-bottom:10px;font-weight:700;
+}
+.masthead-title{
+  font-family:var(--font-display);font-size:clamp(32px,5vw,58px);
+  line-height:1.05;font-weight:900;
+}
+.masthead-title em{color:var(--gold);font-style:italic}
+.masthead-sub{
+  font-size:13px;color:rgba(250,247,242,.55);margin-top:12px;
+  max-width:480px;letter-spacing:.3px;
+}
+.masthead-right{
+  display:flex;flex-direction:column;justify-content:center;
+  padding:24px 0 24px 48px;border-left:1px solid rgba(255,255,255,.1);
+  gap:20px;position:relative;
+}
+.masthead-stat{text-align:right}
+.masthead-stat-val{font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--gold)}
+.masthead-stat-label{font-size:10px;color:rgba(250,247,242,.45);text-transform:uppercase;letter-spacing:1.5px}
+
+/* LAYOUT */
+.page{max-width:1200px;margin:0 auto;padding:48px 32px}
+.section-rule{
+  display:flex;align-items:center;gap:16px;margin:48px 0 28px;
+}
+.section-rule h2{
+  font-family:var(--font-display);font-size:22px;font-style:italic;
+  color:var(--ink);white-space:nowrap;
+}
+.section-rule::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-rule-num{
+  font-size:10px;color:var(--muted);font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;margin-right:4px;
+}
+
+/* CARDS */
+.card{
+  background:var(--paper);border:1px solid var(--border);
+  border-radius:2px;padding:28px;
+  box-shadow:2px 3px 0 var(--border);
+}
+.card-label{
+  font-size:9px;text-transform:uppercase;letter-spacing:2.5px;
+  color:var(--muted);font-weight:700;margin-bottom:16px;
+}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+
+/* KPI */
+.kpi-val{
+  font-family:var(--font-display);font-size:36px;font-weight:700;
+  line-height:1;color:var(--ink);
+}
+.kpi-val.up{color:var(--sage)}
+.kpi-val.down{color:var(--rust)}
+.kpi-val.gold{color:var(--gold)}
+.kpi-delta{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:700;margin-top:6px;
+  padding:2px 7px;border-radius:2px;
+}
+.kpi-delta.pos{background:rgba(74,124,89,.12);color:var(--sage)}
+.kpi-delta.neg{background:rgba(196,82,10,.12);color:var(--rust)}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* CHART */
+.chart-wrap{position:relative;height:240px}
+.chart-wrap.tall{height:300px}
+
+/* SQL BLOCK */
+.sql-block{
+  background:#1a1410;border-radius:2px;
+  padding:20px 24px;font-family:'Courier New',monospace;
+  font-size:12px;line-height:1.8;overflow-x:auto;
+  border-left:3px solid var(--rust);
+}
+.sql-kw{color:#c4520a;font-weight:bold}
+.sql-fn{color:#d4922a}
+.sql-str{color:#4a7c59}
+.sql-cmt{color:#5a4d3e;font-style:italic}
+.sql-num{color:#d4922a}
+
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{
+  text-align:left;padding:10px 14px;
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);font-weight:700;
+  border-bottom:2px solid var(--border);
+}
+.data-table td{
+  padding:11px 14px;border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+.data-table tr:hover td{background:var(--warm)}
+.pill{
+  display:inline-block;padding:2px 9px;border-radius:2px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;
+}
+.pill-green{background:rgba(74,124,89,.15);color:var(--sage)}
+.pill-red{background:rgba(196,82,10,.12);color:var(--rust)}
+.pill-gold{background:rgba(212,146,42,.15);color:var(--gold)}
+
+/* INSIGHT BOX */
+.insight{
+  border-left:3px solid var(--rust);
+  padding:16px 20px;background:var(--warm);margin-top:20px;
+}
+.insight-title{font-weight:700;font-size:13px;margin-bottom:6px}
+.insight p{font-size:12px;color:var(--muted);line-height:1.65}
+
+/* TOOL BADGES */
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tool{
+  font-size:10px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;padding:4px 10px;
+  border:1px solid var(--border);color:var(--muted);
+  border-radius:2px;
+}
+
+/* FUNNEL */
+.funnel-row{
+  display:flex;align-items:center;gap:16px;margin-bottom:12px;
+}
+.funnel-label{font-size:11px;font-weight:700;width:130px;flex-shrink:0;color:var(--ink)}
+.funnel-bar-wrap{flex:1;background:var(--warm);height:28px;border-radius:2px;overflow:hidden;position:relative}
+.funnel-bar{height:100%;border-radius:2px;display:flex;align-items:center;padding-left:10px;
+  font-size:10px;font-weight:700;color:white;letter-spacing:.5px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.funnel-pct{font-size:11px;color:var(--muted);width:44px;text-align:right}
+
+/* SPARKLINE row */
+.spark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.spark-item{background:var(--warm);border:1px solid var(--border);padding:16px;border-radius:2px}
+.spark-name{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.spark-val{font-family:var(--font-display);font-size:22px;font-weight:700}
+.spark-canvas{height:48px;margin-top:8px}
+
+/* FOOTER */
+.case-footer{
+  margin-top:56px;padding-top:24px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:flex-end;
+  flex-wrap:wrap;gap:16px;
+}
+.case-footer p{font-size:11px;color:var(--muted)}
+.case-nav{
+  display:flex;gap:12px;
+}
+.case-nav a{
+  font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:var(--rust);text-decoration:none;padding:8px 16px;
+  border:1px solid var(--rust);border-radius:2px;
+  transition:background .2s,color .2s;
+}
+.case-nav a:hover{background:var(--rust);color:white}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.page>*{animation:fadeUp .5s ease both}
+.page>*:nth-child(1){animation-delay:.05s}
+.page>*:nth-child(2){animation-delay:.1s}
+.page>*:nth-child(3){animation-delay:.15s}
+.page>*:nth-child(4){animation-delay:.2s}
+.page>*:nth-child(5){animation-delay:.25s}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="masthead-eyebrow">Case Study 01 · Business / Marketing Analytics</div>
+    <h1 class="masthead-title">Campaign<br><em>Performance</em><br>Deep Dive</h1>
+    <p class="masthead-sub">Q3 2024 · Multi-channel attribution, funnel analysis, and ROAS optimisation for a DTC e-commerce brand generating £4.2M/yr revenue.</p>
+    <div class="tools">
+      <span class="tool" style="color:var(--rust);border-color:var(--rust)">SQL · BigQuery</span>
+      <span class="tool">Python · pandas</span>
+      <span class="tool">Looker Studio</span>
+      <span class="tool">Excel</span>
+    </div>
+  </div>
+  <div class="masthead-right">
+    <div class="masthead-stat"><div class="masthead-stat-val">£4.2M</div><div class="masthead-stat-label">Revenue analysed</div></div>
+    <div class="masthead-stat"><div class="masthead-stat-val">3.8×</div><div class="masthead-stat-label">Avg ROAS</div></div>
+    <div class="masthead-stat"><div class="masthead-stat-val">+24%</div><div class="masthead-stat-label">CVR uplift found</div></div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- KPIs -->
+  <div class="section-rule">
+    <span class="section-rule-num">01</span>
+    <h2>Executive Summary</h2>
+  </div>
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-label">Total Ad Spend</div>
+      <div class="kpi-val">£312K</div>
+      <div class="kpi-delta neg">↑ £28K vs Q2</div>
+      <div class="kpi-sub">Across 4 channels</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Revenue Attributed</div>
+      <div class="kpi-val up">£1.18M</div>
+      <div class="kpi-delta pos">↑ 18.4% vs Q2</div>
+      <div class="kpi-sub">Last-click + data-driven</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Blended ROAS</div>
+      <div class="kpi-val gold">3.78×</div>
+      <div class="kpi-delta pos">↑ 0.4× vs Q2</div>
+      <div class="kpi-sub">Target: 3.5×</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Conversion Rate</div>
+      <div class="kpi-val">2.34%</div>
+      <div class="kpi-delta pos">↑ 0.31pp vs Q2</div>
+      <div class="kpi-sub">Site-wide blended</div>
+    </div>
+  </div>
+
+  <!-- ROAS by channel -->
+  <div class="section-rule">
+    <span class="section-rule-num">02</span>
+    <h2>ROAS by Channel — the SQL</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-label">Query · Channel ROAS & CPA</div>
+        <div class="sql-block">
+<span class="sql-cmt">-- Calculate ROAS and CPA per channel</span>
+<span class="sql-cmt">-- using last-click attribution model</span>
+<span class="sql-kw">WITH</span> channel_spend <span class="sql-kw">AS</span> (
+  <span class="sql-kw">SELECT</span>
+    channel,
+    <span class="sql-fn">SUM</span>(spend)       <span class="sql-kw">AS</span> total_spend,
+    <span class="sql-fn">COUNT</span>(DISTINCT session_id) <span class="sql-kw">AS</span> sessions
+  <span class="sql-kw">FROM</span> marketing.ad_spend
+  <span class="sql-kw">WHERE</span> date <span class="sql-kw">BETWEEN</span> <span class="sql-str">'2024-07-01'</span>
+                <span class="sql-kw">AND</span> <span class="sql-str">'2024-09-30'</span>
+  <span class="sql-kw">GROUP BY</span> <span class="sql-num">1</span>
+),
+channel_revenue <span class="sql-kw">AS</span> (
+  <span class="sql-kw">SELECT</span>
+    o.acquisition_channel  <span class="sql-kw">AS</span> channel,
+    <span class="sql-fn">SUM</span>(o.order_value)     <span class="sql-kw">AS</span> revenue,
+    <span class="sql-fn">COUNT</span>(o.order_id)      <span class="sql-kw">AS</span> conversions
+  <span class="sql-kw">FROM</span> orders.fact_orders o
+  <span class="sql-kw">WHERE</span> o.order_date <span class="sql-kw">BETWEEN</span> <span class="sql-str">'2024-07-01'</span>
+                        <span class="sql-kw">AND</span> <span class="sql-str">'2024-09-30'</span>
+  <span class="sql-kw">GROUP BY</span> <span class="sql-num">1</span>
+)
+<span class="sql-kw">SELECT</span>
+  s.channel,
+  s.total_spend,
+  r.revenue,
+  <span class="sql-fn">ROUND</span>(r.revenue / s.total_spend, <span class="sql-num">2</span>) <span class="sql-kw">AS</span> roas,
+  <span class="sql-fn">ROUND</span>(s.total_spend / r.conversions, <span class="sql-num">2</span>) <span class="sql-kw">AS</span> cpa
+<span class="sql-kw">FROM</span> channel_spend s
+<span class="sql-kw">JOIN</span> channel_revenue r <span class="sql-kw">USING</span> (channel)
+<span class="sql-kw">ORDER BY</span> roas <span class="sql-kw">DESC</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="height:100%">
+        <div class="card-label">ROAS by Channel — Q3 2024</div>
+        <div class="chart-wrap">
+          <canvas id="roasChart"></canvas>
+        </div>
+        <div class="insight">
+          <div class="insight-title">📌 Key Finding</div>
+          <p>Paid Search delivers the highest ROAS (5.2×) but only accounts for 18% of spend. Shifting £20K from Meta to Paid Search is projected to lift blended ROAS by 0.3× based on marginal return curves.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FUNNEL -->
+  <div class="section-rule">
+    <span class="section-rule-num">03</span>
+    <h2>Conversion Funnel Analysis</h2>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Full-Funnel Drop-off</div>
+      <div style="margin-top:8px">
+        <div class="funnel-row"><div class="funnel-label">Sessions</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="f1" style="width:0%;background:#1a1410">248,431</div></div><div class="funnel-pct">100%</div></div>
+        <div class="funnel-row"><div class="funnel-label">Product Views</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="f2" style="width:0%;background:#c4520a">119,247</div></div><div class="funnel-pct">48.0%</div></div>
+        <div class="funnel-row"><div class="funnel-label">Add to Cart</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="f3" style="width:0%;background:#d4922a">38,506</div></div><div class="funnel-pct">15.5%</div></div>
+        <div class="funnel-row"><div class="funnel-label">Checkout Start</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="f4" style="width:0%;background:#4a7c59">19,874</div></div><div class="funnel-pct">8.0%</div></div>
+        <div class="funnel-row"><div class="funnel-label">Purchase</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="f5" style="width:0%;background:#2a5a3a">5,813</div></div><div class="funnel-pct">2.3%</div></div>
+      </div>
+      <div class="insight">
+        <div class="insight-title">📌 Biggest Drop-off</div>
+        <p>Cart → Checkout loses 48% of users. A/B testing a single-page checkout (vs. 3-step) is the highest-leverage test available — industry benchmark suggests +15–22% checkout completion rate.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Weekly Revenue Trend by Channel</div>
+      <div class="chart-wrap tall">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANNEL TABLE -->
+  <div class="section-rule">
+    <span class="section-rule-num">04</span>
+    <h2>Channel Performance Table</h2>
+  </div>
+  <div class="card">
+    <div class="card-label">Q3 2024 · All Channels · Last-click Attribution</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Channel</th><th>Spend</th><th>Revenue</th><th>ROAS</th>
+          <th>CPA</th><th>CVR</th><th>New Customers %</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Paid Search</strong></td><td>£56,200</td><td>£292,240</td><td style="font-weight:700;color:var(--sage)">5.20×</td><td>£9.67</td><td>3.81%</td><td>74%</td><td><span class="pill pill-green">Scale</span></td></tr>
+        <tr><td><strong>Email / CRM</strong></td><td>£8,400</td><td>£37,800</td><td style="font-weight:700;color:var(--sage)">4.50×</td><td>£4.12</td><td>4.20%</td><td>22%</td><td><span class="pill pill-green">Scale</span></td></tr>
+        <tr><td><strong>Meta Ads</strong></td><td>£148,000</td><td>£518,000</td><td style="font-weight:700;color:var(--gold)">3.50×</td><td>£25.48</td><td>1.92%</td><td>61%</td><td><span class="pill pill-gold">Optimise</span></td></tr>
+        <tr><td><strong>TikTok Ads</strong></td><td>£62,000</td><td>£198,400</td><td style="font-weight:700;color:var(--gold)">3.20×</td><td>£31.00</td><td>1.44%</td><td>82%</td><td><span class="pill pill-gold">Test</span></td></tr>
+        <tr><td><strong>Affiliates</strong></td><td>£24,000</td><td>£62,400</td><td style="font-weight:700;color:var(--rust)">2.60×</td><td>£48.00</td><td>1.10%</td><td>55%</td><td><span class="pill pill-red">Review</span></td></tr>
+        <tr><td><strong>Organic / SEO</strong></td><td>—</td><td>£71,160</td><td style="font-weight:700;color:var(--sage)">∞</td><td>—</td><td>2.88%</td><td>68%</td><td><span class="pill pill-green">Invest</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- COHORT SPEND -->
+  <div class="section-rule">
+    <span class="section-rule-num">05</span>
+    <h2>New vs. Returning Customer Revenue Mix</h2>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Revenue Split · New vs Returning · Weekly</div>
+      <div class="chart-wrap tall">
+        <canvas id="cohortChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Business Recommendations</div>
+      <div style="display:flex;flex-direction:column;gap:16px;padding-top:8px">
+        <div class="insight" style="margin-top:0">
+          <div class="insight-title">1 · Reallocate £20K from Meta → Paid Search</div>
+          <p>Paid Search ROAS is 1.7× higher than Meta. Projected incremental revenue: £34K with minimal risk given existing quality score history.</p>
+        </div>
+        <div class="insight" style="margin-top:0;border-color:var(--gold)">
+          <div class="insight-title">2 · A/B Test Single-Page Checkout</div>
+          <p>Cart→Checkout drop-off is 48%. Even a 15% improvement in checkout completion = +£87K quarterly revenue at current traffic levels.</p>
+        </div>
+        <div class="insight" style="margin-top:0;border-color:var(--sage)">
+          <div class="insight-title">3 · Scale Email Automation</div>
+          <p>Email has lowest CPA (£4.12) and highest CVR (4.2%). A 3-email abandoned cart flow + post-purchase sequence could capture £22K in otherwise-lost revenue.</p>
+        </div>
+        <div class="insight" style="margin-top:0;border-color:var(--muted)">
+          <div class="insight-title">4 · Review Affiliate Programme</div>
+          <p>ROAS 2.6× is below blended target. Audit top 20 affiliates by quality — likely a small cohort driving low-LTV voucher-code customers inflating CPA.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="case-footer">
+    <div>
+      <p>Case Study 01 / 04 · Business & Marketing Analytics</p>
+      <p style="margin-top:4px">Tools: SQL (BigQuery) · Python (pandas, matplotlib) · Looker Studio · Excel</p>
+    </div>
+    <div class="case-nav">
+      <a href="02_product_analytics.html">Next: Product Analytics →</a>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const RUST='#c4520a',GOLD='#d4922a',SAGE='#4a7c59',INK='#1a1410',MUTED='#8a7968';
+const gridOpts={color:'rgba(26,20,16,.06)'};
+const tickOpts={color:MUTED,font:{family:'Lato',size:10}};
+
+// ROAS chart
+new Chart(document.getElementById('roasChart'),{
+  type:'bar',
+  data:{
+    labels:['Paid Search','Email','Meta Ads','TikTok','Affiliates'],
+    datasets:[{
+      label:'ROAS',
+      data:[5.20,4.50,3.50,3.20,2.60],
+      backgroundColor:[SAGE,SAGE,GOLD,GOLD,RUST],
+      borderRadius:2,
+    },{
+      label:'Target (3.5×)',
+      data:[3.5,3.5,3.5,3.5,3.5],
+      type:'line',
+      borderColor:INK,borderDash:[4,4],
+      pointRadius:0,borderWidth:1.5,fill:false,
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:MUTED,font:{size:10}}}},
+    scales:{
+      x:{ticks:tickOpts,grid:{color:'rgba(0,0,0,.04)'}},
+      y:{ticks:{...tickOpts,callback:v=>v+'×'},grid:gridOpts,min:0,max:6}
+    }
+  }
+});
+
+// Weekly trend
+const weeks=['W27','W28','W29','W30','W31','W32','W33','W34','W35','W36','W37','W38','W39'];
+new Chart(document.getElementById('trendChart'),{
+  type:'line',
+  data:{
+    labels:weeks,
+    datasets:[
+      {label:'Paid Search',data:[18200,19400,22100,21800,24300,23700,26100,25400,28200,27600,29800,31200,29400],borderColor:SAGE,backgroundColor:'rgba(74,124,89,.1)',fill:true,tension:.4,pointRadius:2,borderWidth:2},
+      {label:'Meta',data:[38400,41200,39800,44600,43100,46800,45300,48900,47200,51400,49800,53200,50600],borderColor:RUST,backgroundColor:'rgba(196,82,10,.06)',fill:true,tension:.4,pointRadius:2,borderWidth:2},
+      {label:'Email',data:[2400,2800,3100,2600,4200,3800,4600,3900,5100,4700,5400,5900,4800],borderColor:GOLD,backgroundColor:'rgba(212,146,42,.08)',fill:true,tension:.4,pointRadius:2,borderWidth:2},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:MUTED,font:{size:10}}}},
+    scales:{
+      x:{ticks:tickOpts,grid:{color:'rgba(0,0,0,.04)'}},
+      y:{ticks:{...tickOpts,callback:v=>'£'+(v/1000).toFixed(0)+'K'},grid:gridOpts}
+    }
+  }
+});
+
+// Cohort stacked
+new Chart(document.getElementById('cohortChart'),{
+  type:'bar',
+  data:{
+    labels:weeks,
+    datasets:[
+      {label:'Returning',data:[42000,44800,48200,46100,52400,50800,55300,53700,58200,56800,61400,64800,60200],backgroundColor:SAGE,stack:'a'},
+      {label:'New',data:[28200,31400,33800,36200,34100,38600,36800,41200,38900,43600,41200,45800,42100],backgroundColor:RUST,stack:'a'},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:MUTED,font:{size:10}}}},
+    scales:{
+      x:{ticks:tickOpts,grid:{display:false},stacked:true},
+      y:{ticks:{...tickOpts,callback:v=>'£'+(v/1000).toFixed(0)+'K'},grid:gridOpts,stacked:true}
+    }
+  }
+});
+
+// Animate funnels
+setTimeout(()=>{
+  document.getElementById('f1').style.width='100%';
+  document.getElementById('f2').style.width='48%';
+  document.getElementById('f3').style.width='15.5%';
+  document.getElementById('f4').style.width='8%';
+  document.getElementById('f5').style.width='2.3%';
+},200);
+</script>
+</body>
+</html>

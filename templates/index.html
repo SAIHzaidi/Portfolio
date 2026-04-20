@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{# ── HERO ─────────────────────────────────────────────────────────── #}
+<section class="hero" id="home">
+  <div class="hero-content">
+    <div class="hero-eyebrow">// {{ profile.subtitle }}</div>
+    <h1>Data that<br>drives <span>decisions</span></h1>
+    <p class="hero-bio">5 years turning complex datasets into actionable growth and
+    product insights — advanced SQL, Power BI, Python, and a discipline for data
+    quality that consistently delivers 98%+ accuracy.</p>
+    <div class="hero-contacts">
+      <div class="contact-row"><span class="contact-dot"></span>{{ profile.email }}</div>
+      <div class="contact-row"><span class="contact-dot"></span>{{ profile.phone }}</div>
+      <div class="contact-row"><span class="contact-dot"></span>{{ profile.education }}</div>
+    </div>
+    <div class="hero-actions">
+      <a href="#dashboards" class="btn-p">View Dashboards</a>
+      <a href="#contact" class="btn-o">Get in Touch</a>
+    </div>
+  </div>
+
+  <div class="metrics-grid">
+    {% for s in profile.stats %}
+    <div class="metric-card">
+      <div class="metric-num">{{ s.value }}<span>{{ s.unit }}</span></div>
+      <div class="metric-label">{{ s.label }}</div>
+      <div class="metric-bar">
+        <div class="metric-fill" data-target="{{ s.pct }}"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{# ── ABOUT ────────────────────────────────────────────────────────── #}
+<section id="about">
+  <div class="section-wrap">
+    <div class="section-eyebrow">// 01 — About</div>
+    <div class="section-title">Insight-driven, accuracy-obsessed</div>
+    <div class="about-grid">
+      <div class="about-text">
+        {% for para in profile.bio %}
+        <p>{{ para }}</p>
+        {% endfor %}
+      </div>
+      <div class="expertise-list">
+        {% for item in expertise %}
+        <div class="expertise-item">
+          <div class="exp-title">{{ item.title }}</div>
+          <div class="exp-desc">{{ item.desc }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── SKILLS ───────────────────────────────────────────────────────── #}
+<section id="skills" class="skills-section">
+  <div class="skills-inner">
+    <div class="section-eyebrow">// 02 — Skills</div>
+    <div class="section-title">Technical toolkit</div>
+    <div class="skill-categories">
+      {% for cat in skill_categories %}
+      <div class="skill-cat">
+        <div class="skill-cat-title">{{ cat.title }}</div>
+        <div class="skill-tags">
+          {% for tag in cat.tags %}
+          <span class="skill-tag {{ cat.cls }}">{{ tag }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ── PROFICIENCY ──────────────────────────────────────────────────── #}
+<section class="chart-section">
+  <div class="chart-inner">
+    <div class="section-eyebrow">// Proficiency</div>
+    <div class="section-title">Core skill strength</div>
+    <div class="bar-chart">
+      {% for p in proficiency %}
+      <div class="bar-row">
+        <div class="bar-label">{{ p.label }}</div>
+        <div class="bar-track">
+          <div class="bar-fill" data-target="{{ p.pct }}">
+            <span class="bar-inner-label">{{ p.band }}</span>
+          </div>
+        </div>
+        <div class="bar-pct">{{ p.pct }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ── DASHBOARDS ───────────────────────────────────────────────────── #}
+<section id="dashboards">
+  <div class="section-wrap">
+    <div class="section-eyebrow">// 03 — Portfolio</div>
+    <div class="section-title">Analytics dashboards
+      <span class="dash-count">{{ dashboards | length }} case studies</span>
+    </div>
+    <div class="dashboards-grid">
+      {% for d in dashboards %}
+      <div class="dash-card">
+
+        {# Coloured preview strip #}
+        <div class="dash-preview" style="background:{{ d.preview_bg }}">
+          <div class="dash-preview-inner">
+            <div class="dash-case-num">Case Study {{ d.num }}</div>
+            <div style="display:flex;gap:1.75rem">
+              {% for ps in d.preview_stats %}
+              <div style="text-align:center">
+                <div class="dash-preview-num" style="color:{{ ps.color }}">{{ ps.val }}</div>
+                <div class="dash-preview-sub">{{ ps.label }}</div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        {# Card body #}
+        <div class="dash-body">
+          <span class="dash-tag" style="{{ d.tag_style }}">{{ d.category }}</span>
+          <div class="dash-title">{{ d.title }}</div>
+          <div class="dash-desc">{{ d.desc }}</div>
+          <div class="dash-stats">
+            {% for s in d.stats %}
+            <div class="ds">
+              <div class="ds-val">{{ s.val }}</div>
+              <div class="ds-label">{{ s.label }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          <a class="dash-link" href="{{ url_for('dashboard', filename=d.file) }}" target="_blank">
+            Open dashboard
+            <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor"
+                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ── EXPERIENCE ───────────────────────────────────────────────────── #}
+<section id="experience">
+  <div class="section-wrap">
+    <div class="section-eyebrow">// 04 — Experience & Education</div>
+    <div class="section-title">Career timeline</div>
+    <div class="timeline">
+      {% for job in experience %}
+      <div class="t-item">
+        <div class="t-date">{{ job.period | replace(" – ", "<br>") | safe }}</div>
+        <div class="t-dot"></div>
+        <div class="t-body">
+          <h3>{{ job.role }}
+            {% for badge_text, badge_cls in job.badges %}
+            <span class="badge badge-{{ badge_cls }}">{{ badge_text }}</span>
+            {% endfor %}
+          </h3>
+          <div class="t-company">{{ job.company }}</div>
+          <ul class="t-bullets">
+            {% for bullet in job.bullets %}
+            <li>{{ bullet }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ── CERTIFICATIONS ───────────────────────────────────────────────── #}
+<section id="certifications">
+  <div class="section-wrap">
+    <div class="section-eyebrow">// 05 — Credentials</div>
+    <div class="section-title">Certifications & conferences</div>
+    <div class="cert-grid">
+      {% for c in certifications %}
+      <div class="cert-card">
+        <div class="cert-icon">{{ c.icon }}</div>
+        <div class="cert-name">{{ c.name }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="section-eyebrow" style="margin-bottom:10px">Conference presentations</div>
+    <div class="conf-list">
+      {% for conf in conferences %}
+      <div class="conf-item">
+        <div class="conf-year">{{ conf.year }}</div>
+        <div>
+          <div class="conf-title">{{ conf.title }}</div>
+          <div class="conf-event">{{ conf.event }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ── CONTACT ──────────────────────────────────────────────────────── #}
+<section id="contact">
+  <div class="contact-outer">
+    <div class="section-eyebrow">// 06 — Contact</div>
+    <div class="section-title">Let's connect</div>
+    <div class="contact-grid">
+      <div>
+        <p class="contact-tagline">Open to senior data analyst, BI, and analytics
+        engineering roles — especially where insight quality and data governance
+        really matter.</p>
+        <div class="cta-links">
+          <div class="cta-link">
+            <span class="cta-dot"></span>{{ profile.email }}
+          </div>
+          <div class="cta-link">
+            <span class="cta-dot"></span>{{ profile.phone }}
+          </div>
+          <div class="cta-link">
+            <span class="cta-dot"></span>{{ profile.linkedin }}
+          </div>
+        </div>
+      </div>
+      <div class="contact-form">
+        <input type="text"  class="form-field" placeholder="Your name" />
+        <input type="email" class="form-field" placeholder="Your email" />
+        <textarea           class="form-field" placeholder="Your message"></textarea>
+        <button class="send-btn">Send message</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

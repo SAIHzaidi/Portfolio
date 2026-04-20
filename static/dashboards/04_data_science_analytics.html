@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Science Analytics · Churn Prediction & A/B Testing</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow:ital,wght@0,300;0,500;0,700;0,900;1,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ec e5;--white:#f5f2eb;--black:#0f0d0a;
+  --yellow:#f5d800;--yellow2:#fde84a;
+  --blue:#1a2fff;--red:#ff2d1a;
+  --muted:#6b6555;--border:#d4cfc4;
+  --font-mono:'Space Mono',monospace;
+  --font-display:'Barlow',system-ui,sans-serif;
+}
+body{
+  background:var(--white);color:var(--black);
+  font-family:var(--font-mono);font-size:12px;
+  min-height:100vh;
+}
+
+/* HERO BLOCK */
+.hero{
+  background:var(--black);
+  display:grid;grid-template-columns:1fr 1fr;
+  min-height:260px;
+}
+.hero-left{
+  padding:44px 48px;border-right:4px solid var(--yellow);
+  position:relative;
+}
+.hero-tag{
+  display:inline-block;background:var(--yellow);color:var(--black);
+  font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:4px 10px;margin-bottom:20px;
+}
+.hero-title{
+  font-family:var(--font-display);font-size:clamp(36px,5vw,64px);
+  font-weight:900;font-style:italic;color:var(--white);
+  line-height:1;text-transform:uppercase;
+}
+.hero-title .accent{color:var(--yellow)}
+.hero-tools{
+  display:flex;gap:8px;margin-top:24px;flex-wrap:wrap;
+}
+.hero-tool{
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  border:1px solid rgba(245,216,0,.3);color:rgba(245,216,0,.7);
+  padding:4px 10px;
+}
+.hero-right{
+  display:grid;grid-template-columns:1fr 1fr;
+}
+.hero-stat{
+  padding:28px 32px;border-right:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;flex-direction:column;justify-content:flex-end;
+}
+.hero-stat:nth-child(2){border-right:none}
+.hero-stat:nth-child(3){border-bottom:none}
+.hero-stat:nth-child(4){border-right:none;border-bottom:none}
+.hero-stat-val{
+  font-family:var(--font-display);font-size:36px;font-weight:900;
+  color:var(--yellow);line-height:1;
+}
+.hero-stat-label{
+  font-size:9px;color:rgba(255,255,255,.35);
+  text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;
+}
+
+/* LAYOUT */
+.page{max-width:1240px;margin:0 auto;padding:0 48px 48px}
+
+/* SECTION HEADER */
+.sh{
+  display:flex;align-items:center;gap:0;
+  margin:48px 0 24px;
+  border-top:2px solid var(--black);
+}
+.sh-num{
+  background:var(--black);color:var(--yellow);
+  font-size:10px;font-weight:700;letter-spacing:1px;
+  padding:6px 12px;flex-shrink:0;
+}
+.sh-title{
+  font-family:var(--font-display);font-size:18px;font-weight:700;
+  padding:6px 16px;text-transform:uppercase;letter-spacing:1px;
+}
+.sh-desc{
+  font-size:9px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:1.5px;margin-left:auto;padding-right:8px;
+}
+
+/* CARDS */
+.card{
+  background:var(--white);border:2px solid var(--black);
+  padding:24px;
+}
+.card.yellow{background:var(--yellow)}
+.card.black{background:var(--black);color:var(--white)}
+.card-label{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:14px;font-weight:700;
+  border-bottom:1px solid var(--border);padding-bottom:8px;
+}
+.card.black .card-label{color:rgba(255,255,255,.4);border-bottom-color:rgba(255,255,255,.1)}
+.card.yellow .card-label{color:rgba(15,13,10,.5);border-bottom-color:rgba(15,13,10,.2)}
+
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:2px solid var(--black)}
+.grid-4 .card{border:none;border-right:2px solid var(--black)}
+.grid-4 .card:last-child{border-right:none}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid-32{display:grid;grid-template-columns:3fr 2fr;gap:20px}
+
+.kpi-val{
+  font-family:var(--font-display);font-size:40px;font-weight:900;
+  line-height:1;
+}
+.kpi-label{font-size:9px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:1.2px}
+.kpi-delta{font-size:11px;margin-top:8px;font-weight:700}
+.delta-g{color:var(--blue)}
+.delta-r{color:var(--red)}
+
+/* CODE */
+.code{
+  background:var(--black);color:#a8ff78;
+  padding:20px 22px;font-family:var(--font-mono);
+  font-size:11px;line-height:1.9;overflow-x:auto;white-space:pre;
+  border:2px solid var(--black);
+}
+.ck{color:var(--yellow);font-weight:700}
+.cf{color:#78d4ff}
+.cs{color:#ffa8a8}
+.cc{color:#444230;font-style:italic}
+.cn{color:#ff9f5a}
+.cm{color:#a8ff78}
+
+/* CHART */
+.chart-wrap{height:240px;position:relative}
+.chart-wrap.tall{height:300px}
+.chart-wrap.sm{height:180px}
+
+/* CONFUSION MATRIX */
+.cm-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:3px;width:220px;margin:16px auto;
+}
+.cm-cell{
+  padding:20px 10px;text-align:center;border:2px solid var(--black);
+}
+.cm-cell .big{font-family:var(--font-display);font-size:32px;font-weight:900}
+.cm-cell .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:4px}
+.cm-tp{background:var(--yellow)}
+.cm-tn{background:rgba(26,47,255,.12)}
+.cm-fp{background:rgba(255,45,26,.1)}
+.cm-fn{background:rgba(255,45,26,.2)}
+
+/* AB RESULT */
+.ab-row{
+  display:grid;grid-template-columns:120px 1fr auto;
+  align-items:center;gap:16px;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.ab-name{font-size:11px;font-weight:700}
+.ab-bar-wrap{height:8px;background:var(--border);position:relative}
+.ab-bar{height:100%;position:absolute;left:0;top:0}
+.ab-val{font-family:var(--font-display);font-size:14px;font-weight:700;white-space:nowrap}
+
+/* FEATURE IMPORTANCE */
+.fi-row{
+  display:flex;align-items:center;gap:12px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+}
+.fi-n{font-size:10px;width:28px;color:var(--muted);flex-shrink:0}
+.fi-label{font-size:11px;font-weight:700;width:180px;flex-shrink:0}
+.fi-bar-wrap{flex:1;height:10px;background:var(--border)}
+.fi-bar{height:100%;background:var(--black)}
+.fi-bar.top{background:var(--yellow);outline:2px solid var(--black)}
+.fi-val{font-size:11px;width:44px;text-align:right;font-weight:700}
+
+/* BADGE */
+.badge{
+  display:inline-block;font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;padding:3px 9px;font-weight:700;
+  border:2px solid var(--black);
+}
+.badge-y{background:var(--yellow)}
+.badge-b{background:var(--blue);color:white;border-color:var(--blue)}
+.badge-r{background:var(--red);color:white;border-color:var(--red)}
+
+/* INSIGHT */
+.insight{
+  border:2px solid var(--black);border-left:6px solid var(--yellow);
+  padding:16px 18px;background:var(--white);margin-top:16px;
+}
+.insight h4{font-family:var(--font-display);font-size:15px;font-weight:700;text-transform:uppercase;margin-bottom:6px}
+.insight p{font-size:11px;color:var(--muted);line-height:1.7}
+
+.footer{
+  border-top:4px solid var(--black);padding:24px 48px;
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+  background:var(--black);
+}
+.footer p{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.5px}
+.footer-nav{display:flex;gap:8px}
+.footer-nav a{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:700;
+  color:var(--yellow);text-decoration:none;border:1px solid rgba(245,216,0,.4);
+  padding:8px 16px;transition:background .15s;
+}
+.footer-nav a:hover{background:rgba(245,216,0,.1)}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-left">
+    <div class="hero-tag">Case Study 04 · Data Science Hybrid</div>
+    <h1 class="hero-title">Churn<br><span class="accent">Prediction</span><br>& A/B Testing</h1>
+    <div class="hero-tools">
+      <span class="hero-tool">Python · sklearn</span>
+      <span class="hero-tool">SQL · BigQuery</span>
+      <span class="hero-tool">scipy · stats</span>
+      <span class="hero-tool">Excel</span>
+      <span class="hero-tool">Tableau</span>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-stat"><div class="hero-stat-val">84.6%</div><div class="hero-stat-label">Model Accuracy</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">£2.1M</div><div class="hero-stat-label">Revenue protected</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">0.79</div><div class="hero-stat-label">AUC-ROC Score</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">6</div><div class="hero-stat-label">A/B Tests run</div></div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- MODEL PERFORMANCE -->
+  <div class="sh"><div class="sh-num">01</div><div class="sh-title">Churn Model Performance</div><div class="sh-desc">Binary classification · n=18,400</div></div>
+
+  <div class="grid-4" style="margin-bottom:20px">
+    <div class="card"><div class="card-label">Accuracy</div><div class="kpi-val">84.6%</div><div class="kpi-delta delta-g">↑ 11pp vs baseline</div></div>
+    <div class="card yellow"><div class="card-label" style="color:rgba(15,13,10,.5);border-color:rgba(15,13,10,.2)">AUC-ROC</div><div class="kpi-val">0.79</div><div class="kpi-delta delta-g">Strong discriminative power</div></div>
+    <div class="card"><div class="card-label">Precision</div><div class="kpi-val">81.2%</div><div class="kpi-delta" style="color:var(--muted)">Of predicted churns, 81% actual</div></div>
+    <div class="card"><div class="card-label">Recall</div><div class="kpi-val">74.8%</div><div class="kpi-delta delta-g">Catches 75% of all churners</div></div>
+  </div>
+
+  <div class="grid-32">
+    <div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-label">ROC Curve</div>
+          <div class="chart-wrap">
+            <canvas id="rocChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">Confusion Matrix (Test Set, n=3,680)</div>
+          <div class="cm-grid">
+            <div class="cm-cell cm-tp"><div class="big">1,247</div><div class="lbl">True Pos</div></div>
+            <div class="cm-cell cm-fp"><div class="big">288</div><div class="lbl">False Pos</div></div>
+            <div class="cm-cell cm-fn"><div class="big">420</div><div class="lbl">False Neg</div></div>
+            <div class="cm-cell cm-tn"><div class="big">1,725</div><div class="lbl">True Neg</div></div>
+          </div>
+          <div class="insight" style="margin-top:12px">
+            <h4>Why Recall matters here</h4>
+            <p>A missed churner (false neg) costs ~£840 avg LTV. A false alarm costs ~£12 in retention spend. We tuned threshold toward recall — the asymmetric cost justifies it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Feature Importance — Gradient Boosted Classifier</div>
+      <div id="fiBars" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- PYTHON CODE -->
+  <div class="sh"><div class="sh-num">02</div><div class="sh-title">The Python — Model Pipeline</div><div class="sh-desc">sklearn · threshold tuning · SHAP</div></div>
+  <div class="grid-2">
+    <div class="code"><span class="cc"># churn_model.py — production classifier</span>
+<span class="cc"># Gradient Boosted Trees with calibrated threshold</span>
+
+<span class="ck">from</span> sklearn.ensemble <span class="ck">import</span> GradientBoostingClassifier
+<span class="ck">from</span> sklearn.calibration <span class="ck">import</span> CalibratedClassifierCV
+<span class="ck">from</span> sklearn.pipeline <span class="ck">import</span> Pipeline
+<span class="ck">from</span> sklearn.preprocessing <span class="ck">import</span> StandardScaler
+<span class="ck">from</span> sklearn.metrics <span class="ck">import</span> roc_auc_score, classification_report
+<span class="ck">import</span> shap, numpy <span class="ck">as</span> np
+
+<span class="ck">def</span> <span class="cf">build_pipeline</span>() -> Pipeline:
+    <span class="ck">return</span> Pipeline([
+        (<span class="cs">'scaler'</span>, StandardScaler()),
+        (<span class="cs">'clf'</span>, CalibratedClassifierCV(
+            GradientBoostingClassifier(
+                n_estimators=<span class="cn">400</span>,
+                learning_rate=<span class="cn">0.05</span>,
+                max_depth=<span class="cn">4</span>,
+                subsample=<span class="cn">0.8</span>,
+                random_state=<span class="cn">42</span>,
+            ), cv=<span class="cn">5</span>, method=<span class="cs">'isotonic'</span>
+        ))
+    ])
+
+<span class="ck">def</span> <span class="cf">tune_threshold</span>(model, X_val, y_val,
+                    cost_fn=<span class="cn">840</span>, cost_fp=<span class="cn">12</span>):
+    <span class="cc"># Find threshold minimising expected cost</span>
+    <span class="cc"># rather than defaulting to 0.5</span>
+    probs = model.<span class="cm">predict_proba</span>(X_val)[:,<span class="cn">1</span>]
+    thresholds = np.<span class="cm">arange</span>(<span class="cn">0.2</span>, <span class="cn">0.9</span>, <span class="cn">0.01</span>)
+    costs = []
+    <span class="ck">for</span> t <span class="ck">in</span> thresholds:
+        preds = (probs >= t).<span class="cm">astype</span>(int)
+        fp = ((preds==<span class="cn">1</span>) & (y_val==<span class="cn">0</span>)).<span class="cm">sum</span>()
+        fn = ((preds==<span class="cn">0</span>) & (y_val==<span class="cn">1</span>)).<span class="cm">sum</span>()
+        costs.<span class="cm">append</span>(fp * cost_fp + fn * cost_fn)
+    best_t = thresholds[np.<span class="cm">argmin</span>(costs)]
+    <span class="ck">return</span> best_t, np.<span class="cm">min</span>(costs)
+
+<span class="ck">def</span> <span class="cf">explain_predictions</span>(model, X_sample):
+    <span class="cc"># SHAP values for individual-level explanations</span>
+    <span class="cc"># Used in the retention team's dashboard</span>
+    explainer = shap.<span class="cm">TreeExplainer</span>(
+        model.<span class="cm">named_steps</span>(<span class="cs">'clf'</span>)
+             .<span class="cm">base_estimator</span>
+    )
+    shap_vals = explainer.<span class="cm">shap_values</span>(X_sample)
+    <span class="ck">return</span> shap_vals</div>
+
+    <div>
+      <div class="code"><span class="cc">-- SQL: Build churn prediction features</span>
+<span class="cc">-- 90-day observation window per customer</span>
+
+<span class="ck">WITH</span> base <span class="ck">AS</span> (
+  <span class="ck">SELECT</span>
+    customer_id,
+    <span class="cf">DATE_TRUNC</span>(subscription_start, <span class="ck">MONTH</span>)
+                              <span class="ck">AS</span> cohort,
+    plan_type,
+    mrr,
+    contract_length_months
+  <span class="ck">FROM</span> subscriptions
+  <span class="ck">WHERE</span> status = <span class="cs">'active'</span>
+),
+usage <span class="ck">AS</span> (
+  <span class="ck">SELECT</span>
+    customer_id,
+    <span class="cf">COUNT</span>(<span class="ck">DISTINCT</span> session_date) <span class="ck">AS</span> active_days,
+    <span class="cf">AVG</span>(session_duration_mins)  <span class="ck">AS</span> avg_session,
+    <span class="cf">COUNT</span>(<span class="ck">DISTINCT</span> feature_used) <span class="ck">AS</span> feature_breadth,
+    <span class="cf">MAX</span>(session_date)           <span class="ck">AS</span> last_active
+  <span class="ck">FROM</span> product_events
+  <span class="ck">WHERE</span> event_date >= <span class="cf">DATE_SUB</span>(<span class="cf">CURRENT_DATE</span>(),
+                              <span class="ck">INTERVAL</span> <span class="cn">90</span> <span class="ck">DAY</span>)
+  <span class="ck">GROUP BY</span> <span class="cn">1</span>
+),
+support <span class="ck">AS</span> (
+  <span class="ck">SELECT</span>
+    customer_id,
+    <span class="cf">COUNT</span>(*)                    <span class="ck">AS</span> ticket_count,
+    <span class="cf">AVG</span>(csat_score)             <span class="ck">AS</span> avg_csat,
+    <span class="cf">SUM</span>(<span class="ck">CASE WHEN</span> priority=<span class="cs">'high'</span>
+            <span class="ck">THEN</span> <span class="cn">1</span> <span class="ck">ELSE</span> <span class="cn">0</span> <span class="ck">END</span>) <span class="ck">AS</span> high_pri_tickets
+  <span class="ck">FROM</span> support_tickets
+  <span class="ck">WHERE</span> created_date >= <span class="cf">DATE_SUB</span>(<span class="cf">CURRENT_DATE</span>(),
+                              <span class="ck">INTERVAL</span> <span class="cn">90</span> <span class="ck">DAY</span>)
+  <span class="ck">GROUP BY</span> <span class="cn">1</span>
+)
+<span class="ck">SELECT</span>
+  b.*,
+  u.active_days,
+  u.avg_session,
+  u.feature_breadth,
+  <span class="cf">DATE_DIFF</span>(<span class="cf">CURRENT_DATE</span>(),
+    u.last_active, <span class="ck">DAY</span>)        <span class="ck">AS</span> days_since_active,
+  s.ticket_count,
+  s.avg_csat,
+  s.high_pri_tickets
+<span class="ck">FROM</span> base b
+<span class="ck">LEFT JOIN</span> usage u <span class="ck">USING</span>(customer_id)
+<span class="ck">LEFT JOIN</span> support s <span class="ck">USING</span>(customer_id)</div>
+      <div class="insight">
+        <h4>Threshold tuning saved £280K</h4>
+        <p>Default 0.5 threshold optimises accuracy. Cost-weighted threshold (0.38) optimises business value — catches 74.8% of churners vs 61% at 0.5. Projected impact: £280K additional LTV retained per quarter.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- A/B TESTING -->
+  <div class="sh"><div class="sh-num">03</div><div class="sh-title">A/B Test Framework</div><div class="sh-desc">scipy.stats · 6 experiments · £340K impact</div></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Experiment Results — Retention Intervention Tests</div>
+      <div id="abTable" style="margin-top:8px"></div>
+    </div>
+    <div class="card black">
+      <div class="card-label">Churn Rate Trend — Pre/Post Model Deployment</div>
+      <div class="chart-wrap tall">
+        <canvas id="churnTrend"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHURN SEGMENTS -->
+  <div class="sh"><div class="sh-num">04</div><div class="sh-title">Churn Risk Segmentation</div><div class="sh-desc">Risk tiers · actionable playbooks</div></div>
+  <div class="grid-3">
+    <div class="card yellow">
+      <div class="card-label" style="color:rgba(15,13,10,.5);border-color:rgba(15,13,10,.2)">🔴 High Risk (&gt;70% churn prob)</div>
+      <div class="kpi-val" style="font-size:28px">1,840</div>
+      <div style="font-size:11px;margin-top:8px;font-weight:700">£1.54M ARR at risk</div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:11px;border-top:1px solid rgba(15,13,10,.15);padding-top:8px">→ Immediate CS outreach within 24h</div>
+        <div style="font-size:11px;border-top:1px solid rgba(15,13,10,.15);padding-top:8px">→ Executive sponsor call for enterprise</div>
+        <div style="font-size:11px;border-top:1px solid rgba(15,13,10,.15);padding-top:8px">→ Custom success plan + QBR</div>
+        <div style="font-size:11px;border-top:1px solid rgba(15,13,10,.15);padding-top:8px">→ Pause billing if CSAT &lt; 3</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">🟡 Medium Risk (40–70%)</div>
+      <div class="kpi-val" style="font-size:28px">3,210</div>
+      <div style="font-size:11px;margin-top:8px;font-weight:700">£2.68M ARR to protect</div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ Automated health score email</div>
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ Feature adoption nudge sequence</div>
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ In-app "Quick Win" checklist</div>
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ Webinar invite for power features</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">🟢 Low Risk (&lt;40%)</div>
+      <div class="kpi-val" style="font-size:28px">7,350</div>
+      <div style="font-size:11px;margin-top:8px;font-weight:700">£6.14M healthy ARR</div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ Upsell / expansion opportunities</div>
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ NPS survey + referral ask</div>
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ Case study / testimonial pipeline</div>
+        <div style="font-size:11px;border-top:1px solid var(--border);padding-top:8px">→ Community ambassador programme</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight" style="margin-top:8px">
+    <h4>Business Impact Summary</h4>
+    <p>Model deployed to production (scoring nightly via Airflow DAG). In first 6 months post-deployment: monthly churn reduced from 4.2% → 3.1% (-26%). At £840 avg LTV this represents <strong>£2.1M in protected annual recurring revenue</strong>. CS team capacity reallocated from reactive firefighting to proactive expansion — NRR improved 8pp.</p>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div>
+    <p>Case Study 04 / 04 · Data Science Hybrid · SaaS / Subscription</p>
+    <p style="margin-top:3px">Stack: Python (sklearn, SHAP, scipy) · SQL (BigQuery) · Excel · Tableau · Airflow</p>
+  </div>
+  <div class="footer-nav">
+    <a href="03_finance_analytics.html">← Finance</a>
+    <a href="00_portfolio_home.html">↑ Portfolio Home</a>
+  </div>
+</footer>
+
+<script>
+const YELLOW='#f5d800',BLUE='#1a2fff',RED='#ff2d1a',BLACK='#0f0d0a',MUTED='#6b6555',BORDER='#d4cfc4';
+const mono={family:'Space Mono',size:10};
+
+// ROC Curve (synthetic)
+const rocPts=[];for(let i=0;i<=100;i++){const fpr=i/100;const tpr=Math.min(1,Math.pow(fpr,.38)*.98+.01);rocPts.push({x:fpr,y:tpr});}
+new Chart(document.getElementById('rocChart'),{
+  type:'line',
+  data:{datasets:[
+    {label:'GBM (AUC=0.79)',data:rocPts,borderColor:BLACK,borderWidth:2,pointRadius:0,fill:false,tension:.2},
+    {label:'Random (AUC=0.50)',data:[{x:0,y:0},{x:1,y:1}],borderColor:MUTED,borderDash:[4,4],pointRadius:0,borderWidth:1,fill:false},
+  ]},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:MUTED,font:mono}}},
+    scales:{
+      x:{ticks:{color:MUTED,font:mono},grid:{color:'rgba(0,0,0,.06)'},title:{display:true,text:'False Positive Rate',color:MUTED,font:mono}},
+      y:{ticks:{color:MUTED,font:mono},grid:{color:'rgba(0,0,0,.06)'},title:{display:true,text:'True Positive Rate',color:MUTED,font:mono}},
+    }
+  }
+});
+
+// Feature importance
+const features=[
+  {name:'days_since_active',imp:22.4,top:true},
+  {name:'feature_breadth',imp:18.1,top:true},
+  {name:'avg_csat_score',imp:14.8,top:false},
+  {name:'high_pri_tickets',imp:12.3,top:false},
+  {name:'active_days_90d',imp:10.6,top:false},
+  {name:'mrr',imp:8.2,top:false},
+  {name:'plan_type',imp:6.4,top:false},
+  {name:'contract_length',imp:4.8,top:false},
+  {name:'ticket_count',imp:2.4,top:false},
+];
+const fb=document.getElementById('fiBars');
+const maxF=features[0].imp;
+features.forEach((f,i)=>{
+  fb.innerHTML+=`<div class="fi-row">
+    <div class="fi-n">${String(i+1).padStart(2,'0')}</div>
+    <div class="fi-label">${f.name}</div>
+    <div class="fi-bar-wrap"><div class="fi-bar${f.top?' top':''}" style="width:${(f.imp/maxF*100).toFixed(0)}%"></div></div>
+    <div class="fi-val">${f.imp}%</div>
+  </div>`;
+});
+
+// A/B tests
+const abTests=[
+  {name:'Proactive CS Call',control:18.4,variant:13.2,lift:-28,sig:true,p:'0.004',winner:true},
+  {name:'Health Score Email',control:18.4,variant:15.8,lift:-14,sig:true,p:'0.031',winner:true},
+  {name:'In-App Checklist',control:18.4,variant:17.6,lift:-4,sig:false,p:'0.18',winner:false},
+  {name:'Discount Offer',control:18.4,variant:16.9,lift:-8,sig:true,p:'0.042',winner:true},
+  {name:'Webinar Invite',control:18.4,variant:18.1,lift:-2,sig:false,p:'0.61',winner:false},
+  {name:'Feature Nudge',control:18.4,variant:17.0,lift:-7,sig:true,p:'0.039',winner:true},
+];
+const abt=document.getElementById('abTable');
+abt.innerHTML=`<div style="display:grid;grid-template-columns:140px 1fr 70px 60px;gap:0;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid ${BLACK}">
+  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:${MUTED}">Experiment</div>
+  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:${MUTED}">Churn Rate</div>
+  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:${MUTED};text-align:center">p-value</div>
+  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:${MUTED};text-align:right">Result</div>
+</div>`;
+abTests.forEach(t=>{
+  const liftPct=(t.lift).toFixed(0);
+  abt.innerHTML+=`<div style="display:grid;grid-template-columns:140px 1fr 70px 60px;gap:0;align-items:center;padding:9px 0;border-bottom:1px solid ${BORDER}">
+    <div style="font-size:11px;font-weight:700">${t.name}</div>
+    <div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:3px">
+        <span style="font-size:9px;color:${MUTED};width:55px">Control:</span>
+        <div style="height:5px;width:${t.control*2}px;background:${MUTED}"></div>
+        <span style="font-size:9px">${t.control}%</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:9px;color:${MUTED};width:55px">Variant:</span>
+        <div style="height:5px;width:${t.variant*2}px;background:${t.winner?BLUE:MUTED}"></div>
+        <span style="font-size:9px;color:${t.winner?BLUE:BLACK};font-weight:700">${t.variant}% (${liftPct}%)</span>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;font-weight:700;color:${t.sig?BLUE:MUTED}">p=${t.p}</div>
+    <div style="text-align:right"><span class="badge ${t.winner?'badge-b':'badge-r'}" style="font-size:8px">${t.winner?'WIN':'NS'}</span></div>
+  </div>`;
+});
+
+// Churn trend
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const churnActual=[4.2,4.1,4.3,4.0,3.9,3.7,null,null,null,null,null,null];
+const churnPost=[null,null,null,null,null,3.7,3.5,3.3,3.2,3.1,3.0,null];
+const churnForecast=[null,null,null,null,null,null,null,null,null,3.1,2.9,2.7];
+new Chart(document.getElementById('churnTrend'),{
+  type:'line',
+  data:{labels:months,datasets:[
+    {label:'Pre-model (actual)',data:churnActual,borderColor:RED,backgroundColor:'rgba(255,45,26,.1)',fill:true,tension:.4,pointRadius:3,borderWidth:2},
+    {label:'Post-model (actual)',data:churnPost,borderColor:YELLOW,backgroundColor:'rgba(245,216,0,.08)',fill:true,tension:.4,pointRadius:3,borderWidth:2},
+    {label:'Forecast',data:churnForecast,borderColor:'rgba(245,216,0,.5)',borderDash:[4,4],pointRadius:4,pointStyle:'star',borderWidth:1.5,fill:false,tension:.3},
+  ]},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'rgba(245,242,235,.5)',font:mono}}},
+    scales:{
+      x:{ticks:{color:'rgba(245,242,235,.4)',font:mono},grid:{color:'rgba(255,255,255,.05)'}},
+      y:{ticks:{color:'rgba(245,242,235,.4)',font:mono,callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'},min:2,max:5}
+    }
+  }
+});
+</script>
+</body>
+</html>
