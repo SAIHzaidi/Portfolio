@@ -11,7 +11,7 @@ PROFILE = {
     "subtitle": "BI · SQL · Python · Power BI",
     "email": "syedaihzaidi@gmail.com",
     "phone": "+92 332 8211131",
-    "linkedin": "linkedin.com/in/syedasadzaidi",
+    "linkedin": "linkedin": "linkedin.com/in/syedaihzaidi",
     "education": "MSc Business Intelligence & Analytics — University of Huddersfield, UK",
     "bio": [
         "Senior Data Analyst with 5 years turning complex datasets into actionable "
