@@ -169,10 +169,36 @@ nav {
 /* ── Experience ─────────────────────────────────────────────────────────── */
 #experience      { background: var(--surface); border-top: 0.5px solid var(--border); }
 .timeline        { display: flex; flex-direction: column; }
-.t-item          { display: grid; grid-template-columns: 120px 1fr; gap: 1.5rem; padding-bottom: 2rem; position: relative; }
-.t-item:not(:last-child)::after { content: ''; position: absolute; left: 119px; top: 10px; bottom: 0; width: 0.5px; background: var(--border); }
-.t-date          { font-size: 11px; color: var(--muted); text-align: right; font-family: 'IBM Plex Mono', monospace; padding-top: 3px; line-height: 1.4; }
-.t-dot           { position: absolute; left: 113px; top: 5px; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); z-index: 1; }
+
+/* 3-column grid: date | dot-lane | content — dot lane is explicit so it never overlaps date */
+.t-item          { display: grid; grid-template-columns: 110px 32px 1fr; gap: 0; padding-bottom: 2rem; position: relative; }
+
+/* Vertical line runs down the centre of the dot lane (col 2 = 110px to 142px, centre = 126px) */
+.t-item:not(:last-child)::after {
+  content: ''; position: absolute;
+  left: 126px; top: 18px; bottom: 0;
+  width: 1px; background: var(--border);
+}
+
+.t-date {
+  font-size: 11px; color: var(--muted);
+  text-align: right; padding-right: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  padding-top: 3px; line-height: 1.5;
+}
+
+/* Dot centred in the 32px lane */
+.t-dot {
+  position: relative; z-index: 1;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--accent);
+  margin: 4px auto 0;
+  display: block;
+}
+
+.t-body          { padding-left: 12px; }
 .t-body h3       { font-size: 14px; font-weight: 500; color: var(--ink2); margin-bottom: 2px; }
 .t-company       { font-size: 12px; color: var(--accent); font-weight: 500; margin-bottom: 6px; font-family: 'IBM Plex Mono', monospace; }
 .t-bullets       { list-style: none; display: flex; flex-direction: column; gap: 4px; }
@@ -215,3 +241,95 @@ textarea.form-field { min-height: 90px; resize: vertical; }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 .footer { background: rgba(0,0,0,0.35); text-align: center; padding: 14px; font-size: 10px; color: rgba(255,255,255,0.2); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.5px; background-color: #0d1117; }
+
+
+/* ── Mobile — tablet (≤768px) ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Nav */
+  nav               { padding: 0 1.25rem; }
+  .nav-links        { gap: 1rem; }
+  .nav-links a      { font-size: 10px; letter-spacing: 0.3px; }
+
+  /* Hero */
+  .hero             { grid-template-columns: 1fr; padding: 2.5rem 1.25rem 2rem; gap: 2rem; }
+  .hero h1          { font-size: 34px; }
+  .hero-bio         { max-width: 100%; }
+  .metrics-grid     { grid-template-columns: 1fr 1fr; }
+
+  /* Sections */
+  .section-wrap     { padding: 2.5rem 1.25rem; }
+  .skills-inner     { padding: 2.5rem 1.25rem; }
+  .chart-inner      { padding: 2.5rem 1.25rem; }
+  .contact-outer    { padding: 2.5rem 1.25rem; }
+
+  /* About */
+  .about-grid       { grid-template-columns: 1fr; gap: 1.5rem; }
+
+  /* Skills */
+  .skill-categories { grid-template-columns: 1fr; }
+
+  /* Proficiency bars */
+  .bar-row          { grid-template-columns: 90px 1fr 36px; gap: 8px; }
+  .bar-label        { font-size: 11px; }
+
+  /* Dashboards */
+  .dashboards-grid  { grid-template-columns: 1fr; }
+
+  /* Timeline — stack vertically, date goes above content */
+  .t-item           { grid-template-columns: 1fr; gap: 0; padding-bottom: 2rem; padding-left: 24px; }
+  .t-item:not(:last-child)::after {
+    left: 5px; top: 22px; bottom: 0; width: 1px;
+  }
+  .t-dot            {
+    position: absolute; left: 0; top: 4px;
+    margin: 0; width: 12px; height: 12px;
+  }
+  .t-date           { text-align: left; font-size: 10px; margin-bottom: 4px; color: var(--accent); }
+  .t-body           { padding-left: 0; }
+
+  /* Certs */
+  .cert-grid        { grid-template-columns: 1fr 1fr; }
+
+  /* Contact */
+  .contact-grid     { grid-template-columns: 1fr; }
+}
+
+
+/* ── Mobile — phone (≤480px) ────────────────────────────────────────────── */
+@media (max-width: 480px) {
+
+  /* Nav — shrink to just name + 3 key links */
+  .nav-links li:nth-child(2),
+  .nav-links li:nth-child(4) { display: none; }
+  .nav-links        { gap: 0.75rem; }
+  .nav-links a      { font-size: 9px; }
+
+  /* Hero */
+  .hero             { padding: 2rem 1rem 1.75rem; }
+  .hero h1          { font-size: 28px; }
+  .hero-eyebrow     { font-size: 10px; }
+  .hero-bio         { font-size: 12px; }
+  .contact-row      { font-size: 11px; }
+  .metrics-grid     { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .metric-num       { font-size: 26px; }
+
+  /* Sections */
+  .section-wrap     { padding: 2rem 1rem; }
+  .skills-inner     { padding: 2rem 1rem; }
+  .chart-inner      { padding: 2rem 1rem; }
+  .contact-outer    { padding: 2rem 1rem; }
+  .section-title    { font-size: 20px; }
+
+  /* Proficiency bars */
+  .bar-row          { grid-template-columns: 80px 1fr 32px; gap: 6px; }
+  .bar-label        { font-size: 10px; }
+  .bar-inner-label  { display: none; }
+
+  /* Dashboard preview numbers */
+  .dash-preview-num { font-size: 20px; }
+  .dash-preview     { height: 130px; }
+
+  /* Cert grid */
+  .cert-grid        { grid-template-columns: 1fr 1fr; }
+}
