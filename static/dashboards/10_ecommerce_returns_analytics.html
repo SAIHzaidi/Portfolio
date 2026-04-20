@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-commerce Returns Analytics · Refund & Loss Optimisation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f3f2f1;--white:#ffffff;--surface:#faf9f8;
+  --blue:#0078d4;--blue2:#106ebe;--navy:#004578;
+  --teal:#00b4d8;--green:#107c10;--red:#d83b01;--red2:#e74c3c;
+  --amber:#ffb900;--purple:#5c2d91;--pink:#e3008c;
+  --border:#edebe9;--border2:#d2d0ce;
+  --text:#323130;--muted:#605e5c;--dim:#a19f9d;
+  --font:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;min-height:100vh}
+
+.topbar{background:var(--navy);height:48px;display:flex;align-items:center;padding:0 20px;gap:16px;position:sticky;top:0;z-index:100}
+.tb-logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:white;letter-spacing:-.2px}
+.tb-icon{width:28px;height:28px;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--navy);border-radius:2px}
+.tb-div{width:1px;height:24px;background:rgba(255,255,255,.2)}
+.tb-title{font-size:13px;color:rgba(255,255,255,.7);font-weight:400}
+.tb-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.tb-badge{font-size:10px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);padding:3px 10px;border-radius:2px;letter-spacing:.5px}
+.tb-dot{width:8px;height:8px;background:#6fcf97;border-radius:50%}
+
+.filterbar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fl{font-size:11px;color:var(--muted);font-weight:500}
+.fc{border:1px solid var(--border2);background:var(--white);padding:4px 12px;border-radius:2px;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:5px;transition:border-color .15s}
+.fc:hover{border-color:var(--blue)}
+.fc.active{border-color:var(--blue);background:rgba(0,120,212,.07);color:var(--blue);font-weight:500}
+.fc-v{font-weight:600}
+
+.canvas{max-width:1400px;margin:0 auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+
+.page-hdr{background:var(--white);border:1px solid var(--border);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-left:4px solid var(--blue)}
+.page-hdr h1{font-size:18px;font-weight:600;color:var(--navy);letter-spacing:-.3px}
+.page-hdr p{font-size:11px;color:var(--muted);margin-top:3px}
+.page-hdr-right{display:flex;gap:8px;align-items:center}
+.refresh-btn{font-size:11px;color:var(--blue);border:1px solid var(--blue);padding:5px 12px;cursor:pointer;background:transparent;font-family:var(--font)}
+.last-refresh{font-size:10px;color:var(--dim)}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi{background:var(--white);border:1px solid var(--border);padding:16px 18px;position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.kpi.blue::after{background:var(--blue)}
+.kpi.red::after{background:var(--red)}
+.kpi.green::after{background:var(--green)}
+.kpi.amber::after{background:var(--amber)}
+.kpi.purple::after{background:var(--purple)}
+.kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:8px}
+.kpi-val{font-size:28px;font-weight:700;color:var(--navy);line-height:1;font-variant-numeric:tabular-nums}
+.kpi-trend{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:600}
+.kpi-trend.up{color:var(--green)}.kpi-trend.bad{color:var(--red)}.kpi-trend.warn{color:var(--amber)}
+.kpi-vs{font-size:10px;color:var(--dim);font-weight:400;margin-left:2px}
+.kpi-spark{height:28px;margin-top:8px}
+
+/* ROWS */
+.row{display:grid;gap:12px}
+.r2{grid-template-columns:3fr 2fr}
+.r2e{grid-template-columns:1fr 1fr}
+.r3{grid-template-columns:2fr 1fr 1fr}
+.r31{grid-template-columns:3fr 1fr}
+
+/* VIS CARDS */
+.vis{background:var(--white);border:1px solid var(--border);padding:0;overflow:hidden}
+.vis-hdr{padding:11px 16px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.vis-hdr-l{display:flex;flex-direction:column;gap:2px}
+.vis-title{font-size:12px;font-weight:600;color:var(--navy);letter-spacing:-.1px}
+.vis-sub{font-size:10px;color:var(--muted)}
+.vis-pill{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600;letter-spacing:.3px}
+.pill-red{background:#fde7e9;color:#c0392b}
+.pill-green{background:#dff6dd;color:#107c10}
+.pill-amber{background:#fff4ce;color:#9a6700}
+.pill-blue{background:#deecf9;color:#0078d4}
+.vis-body{padding:14px}
+.chart-h{height:200px;position:relative}
+.chart-h.tall{height:260px}
+.chart-h.sm{height:150px}
+
+/* INSIGHT BOX */
+.insight{border-left:3px solid var(--blue);background:rgba(0,120,212,.04);padding:10px 14px;margin-top:12px}
+.insight h4{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:4px}
+.insight p{font-size:11px;color:var(--muted);line-height:1.6}
+.insight.warn{border-left-color:var(--red);background:rgba(215,59,1,.04)}
+.insight.good{border-left-color:var(--green);background:rgba(16,124,16,.04)}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:6px 10px;border-bottom:2px solid var(--border);background:var(--surface)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.tbl tr:hover td{background:rgba(0,120,212,.03)}
+.rag{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.rag-r{background:#d83b01}.rag-a{background:#ffb900}.rag-g{background:#107c10}
+.rate-bar{display:flex;align-items:center;gap:6px}
+.rate-track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.rate-fill{height:100%;border-radius:3px}
+
+/* SQL */
+.sql-block{background:#1e1e1e;border-radius:0;padding:16px;font-family:var(--mono);font-size:11px;line-height:1.7;overflow-x:auto}
+.sk{color:#569cd6}.sf{color:#dcdcaa}.ss{color:#ce9178}.sn{color:#b5cea8}.sc{color:#6a9955}.sp{color:#c586c0}
+
+/* TREEMAP */
+.treemap{display:grid;gap:3px}
+.tm-cell{border-radius:2px;display:flex;flex-direction:column;justify-content:flex-end;padding:8px;cursor:default;transition:opacity .15s}
+.tm-cell:hover{opacity:.85}
+.tm-label{font-size:11px;font-weight:600;color:rgba(255,255,255,.9)}
+.tm-val{font-size:10px;color:rgba(255,255,255,.65);margin-top:2px}
+
+/* FUNNEL */
+.funnel{display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.fn-row{display:flex;align-items:center;gap:10px}
+.fn-label{font-size:11px;color:var(--muted);width:110px;text-align:right;flex-shrink:0}
+.fn-track{flex:1;height:28px;background:var(--bg);border-radius:2px;overflow:hidden}
+.fn-fill{height:100%;border-radius:2px;display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:600;color:white;transition:width 1s ease}
+.fn-n{font-size:11px;color:var(--muted);width:60px;text-align:right}
+
+/* FOOTER NAV */
+.footer-strip{background:var(--navy);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.footer-strip p{font-size:10px;color:rgba(255,255,255,.35)}
+.footer-nav{display:flex;gap:8px}
+.footer-nav a{font-size:11px;color:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.15);padding:5px 14px;border-radius:2px;transition:border-color .15s}
+.footer-nav a:hover{border-color:rgba(255,255,255,.5);color:white}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">⚡</div>
+    Power BI
+  </div>
+  <div class="tb-div"></div>
+  <div class="tb-title">E-commerce Returns & Refund Optimisation</div>
+  <div class="tb-right">
+    <span class="tb-badge">CASE STUDY 10 / 11</span>
+    <span class="tb-badge">FY 2024</span>
+    <div class="tb-dot"></div>
+  </div>
+</div>
+
+<div class="filterbar">
+  <span class="fl">Filters:</span>
+  <div class="fc active"><span class="fc-v">FY 2024</span> ▾</div>
+  <div class="fc active"><span class="fc-v">All Categories</span> ▾</div>
+  <div class="fc active"><span class="fc-v">All Channels</span> ▾</div>
+  <div class="fc active"><span class="fc-v">UK + EU</span> ▾</div>
+  <div class="fc">Customer Segment ▾</div>
+  <div class="fc">Return Reason ▾</div>
+  <span style="margin-left:auto;font-size:10px;color:var(--dim)">Last refresh: Today 07:30 AM · Azure Synapse · n=284,620 transactions</span>
+</div>
+
+<div class="canvas">
+
+  <div class="page-hdr">
+    <div>
+      <h1>Returns & Refund Loss Intelligence</h1>
+      <p>UK Fashion Retailer · £45.2M GMV · 284K transactions · Channels: DTC Web, App, Wholesale · Returns processed via 3PL</p>
+    </div>
+    <div class="page-hdr-right">
+      <span class="last-refresh">Data as of 31 Dec 2024</span>
+      <button class="refresh-btn">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi blue">
+      <div class="kpi-lbl">Return Rate</div>
+      <div class="kpi-val" id="kv1">28.4%</div>
+      <div class="kpi-trend bad">▲ +3.1pp <span class="kpi-vs">vs FY23 · Benchmark: 24%</span></div>
+      <canvas class="kpi-spark" id="sp1"></canvas>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-lbl">Gross Refund Cost</div>
+      <div class="kpi-val">£6.8M</div>
+      <div class="kpi-trend bad">▲ +18.2% <span class="kpi-vs">vs FY23</span></div>
+      <canvas class="kpi-spark" id="sp2"></canvas>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-lbl">Net Revenue After Returns</div>
+      <div class="kpi-val">£38.4M</div>
+      <div class="kpi-trend up">▲ +4.1% <span class="kpi-vs">vs FY23</span></div>
+      <canvas class="kpi-spark" id="sp3"></canvas>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-lbl">Resale Recovery Rate</div>
+      <div class="kpi-val">62.1%</div>
+      <div class="kpi-trend warn">▼ −4.3pp <span class="kpi-vs">vs FY23</span></div>
+      <canvas class="kpi-spark" id="sp4"></canvas>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-lbl">Suspected Return Fraud</div>
+      <div class="kpi-val">3.8%</div>
+      <div class="kpi-trend bad">▲ +1.2pp <span class="kpi-vs">vs FY23 · £258K at risk</span></div>
+      <canvas class="kpi-spark" id="sp5"></canvas>
+    </div>
+  </div>
+
+  <!-- ROW 1: Trend + Return Funnel -->
+  <div class="row r2">
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">Monthly Return Rate vs Net Revenue — FY 2024</div>
+          <div class="vis-sub">Dual-axis · Return rate % (line) vs Net revenue £M (bars) · Industry benchmark shown</div>
+        </div>
+        <span class="vis-pill pill-red">Return rate above benchmark</span>
+      </div>
+      <div class="vis-body">
+        <div class="chart-h tall"><canvas id="trendChart"></canvas></div>
+        <div class="insight warn">
+          <h4>📌 Q4 Surge: Return rate hit 34.2% in December</h4>
+          <p>Gifting season returns are the primary driver — 41% of December returns cite "wrong size / bought as gift." Recommend pre-purchase size-guide intervention and extended exchange windows to reduce refund conversion.</p>
+        </div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">Returns Disposition Funnel</div>
+          <div class="vis-sub">What happens to items after return · FY 2024 · n=80,832 units</div>
+        </div>
+      </div>
+      <div class="vis-body">
+        <div class="funnel" id="funnelVis"></div>
+        <div class="insight good">
+          <h4>Opportunity: £1.1M in write-off recovery</h4>
+          <p>14,200 "damaged" units written off. Independent audit shows 38% are Grade B resaleable. Recommend secondary marketplace channel (e.g. Vinted B2B) to recover £420K annually.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Category breakdown + Return reasons -->
+  <div class="row r2e">
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">Return Rate & Refund Cost by Category</div>
+          <div class="vis-sub">Bubble size = gross refund cost · FY 2024</div>
+        </div>
+        <span class="vis-pill pill-red">Dresses & Occasionwear: highest risk</span>
+      </div>
+      <div class="vis-body">
+        <div class="chart-h tall"><canvas id="catChart"></canvas></div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">Primary Return Reason — All Categories</div>
+          <div class="vis-sub">Customer-stated reason at point of return · n=80,832</div>
+        </div>
+      </div>
+      <div class="vis-body">
+        <div class="chart-h tall"><canvas id="reasonChart"></canvas></div>
+        <div class="insight">
+          <h4>Size & fit = 52% of all returns</h4>
+          <p>Fit-related returns are almost entirely preventable. Implementing AI-powered size recommendations (e.g. True Fit) at basket stage is projected to reduce return rate by 6–8pp, saving £1.4–1.9M annually.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Top SKUs table -->
+  <div class="vis">
+    <div class="vis-hdr">
+      <div class="vis-hdr-l">
+        <div class="vis-title">Top 10 SKUs by Return Rate — Intervention Priority List</div>
+        <div class="vis-sub">SKUs with ≥200 units sold · Ranked by return rate · RAG status vs category benchmark</div>
+      </div>
+      <span class="vis-pill pill-red">6 SKUs require immediate review</span>
+    </div>
+    <div class="vis-body" style="padding:0">
+      <table class="tbl" id="skuTable">
+        <thead>
+          <tr>
+            <th>SKU</th><th>Product Name</th><th>Category</th>
+            <th>Units Sold</th><th>Units Returned</th>
+            <th>Return Rate</th><th>Refund Cost</th>
+            <th>Primary Reason</th><th>RAG</th>
+          </tr>
+        </thead>
+        <tbody id="skuTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ROW 4: SQL + Fraud -->
+  <div class="row r2">
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">SQL — Return Cohort & Fraud Flag Query</div>
+          <div class="vis-sub">Azure Synapse · Identifies serial returners and high-risk accounts</div>
+        </div>
+        <span class="vis-pill pill-blue">Azure Synapse Analytics</span>
+      </div>
+      <div class="vis-body" style="padding:0">
+<div class="sql-block"><span class="sc">-- Identify serial returners and flag potential return fraud</span>
+<span class="sc">-- Threshold: >4 returns in 90 days OR return rate >80% of orders</span>
+
+<sp class="sp">WITH</sp> customer_returns <sp class="sp">AS</sp> (
+  <span class="sk">SELECT</span>
+    o.customer_id,
+    c.email,
+    c.registration_date,
+    <span class="sf">COUNT</span>(o.order_id)                          <span class="sk">AS</span> total_orders,
+    <span class="sf">COUNT</span>(r.return_id)                          <span class="sk">AS</span> total_returns,
+    <span class="sf">SUM</span>(r.refund_amount)                        <span class="sk">AS</span> total_refunded,
+    <span class="sf">ROUND</span>(<span class="sf">COUNT</span>(r.return_id) * <span class="sn">100.0</span>
+          / <span class="sf">NULLIF</span>(<span class="sf">COUNT</span>(o.order_id),<span class="sn">0</span>), <span class="sn">1</span>) <span class="sk">AS</span> return_rate_pct,
+    <span class="sf">MAX</span>(r.return_date)                           <span class="sk">AS</span> last_return_date
+  <span class="sk">FROM</span> orders o
+  <span class="sk">LEFT JOIN</span> returns r <span class="sk">ON</span> o.order_id = r.order_id
+  <span class="sk">LEFT JOIN</span> customers c <span class="sk">ON</span> o.customer_id = c.customer_id
+  <span class="sk">WHERE</span> o.order_date >= <span class="sf">DATEADD</span>(<span class="ss">'day'</span>, <span class="sn">-90</span>, <span class="sf">GETDATE</span>())
+    <span class="sk">AND</span> o.channel <span class="sk">IN</span> (<span class="ss">'web'</span>, <span class="ss">'app'</span>, <span class="ss">'wholesale'</span>)
+  <span class="sk">GROUP BY</span> o.customer_id, c.email, c.registration_date
+)
+<span class="sk">SELECT</span>
+  customer_id, email,
+  total_orders, total_returns,
+  return_rate_pct,
+  <span class="sf">ROUND</span>(total_refunded, <span class="sn">2</span>) <span class="sk">AS</span> total_refunded,
+  <span class="sk">CASE</span>
+    <span class="sk">WHEN</span> return_rate_pct >= <span class="sn">80</span>
+      <span class="sk">AND</span> total_returns >= <span class="sn">4</span>  <span class="sk">THEN</span> <span class="ss">'HIGH RISK'</span>
+    <span class="sk">WHEN</span> return_rate_pct >= <span class="sn">60</span>  <span class="sk">THEN</span> <span class="ss">'MONITOR'</span>
+    <span class="sk">ELSE</span>                             <span class="ss">'NORMAL'</span>
+  <span class="sk">END</span> <span class="sk">AS</span> fraud_flag,
+  <span class="sf">DATEDIFF</span>(<span class="ss">'day'</span>, registration_date, <span class="sf">GETDATE</span>()) <span class="sk">AS</span> account_age_days
+<span class="sk">FROM</span> customer_returns
+<span class="sk">WHERE</span> return_rate_pct >= <span class="sn">60</span>
+  <span class="sk">OR</span> total_refunded > <span class="sn">500</span>
+<span class="sk">ORDER BY</span> total_refunded <span class="sk">DESC</span>
+<span class="sk">LIMIT</span> <span class="sn">1000</span>;</div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">Return Fraud Risk Distribution</div>
+          <div class="vis-sub">Accounts flagged by serial return algorithm · 90-day rolling window</div>
+        </div>
+        <span class="vis-pill pill-red">£258K at risk</span>
+      </div>
+      <div class="vis-body">
+        <div class="chart-h"><canvas id="fraudChart"></canvas></div>
+        <div class="insight warn">
+          <h4>Action: Block-and-review protocol for HIGH RISK accounts</h4>
+          <p>3.8% of accounts (≈2,140 customers) flagged as HIGH RISK — contributing 14.2% of all refund value. Recommend: (1) require photo evidence for next return, (2) flag for manual review before processing refund over £80, (3) refer repeat offenders to fraud team.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Channel + Customer segment -->
+  <div class="row r2e">
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">Return Rate by Sales Channel</div>
+          <div class="vis-sub">Gross return rate % · FY 2024 · By originating channel</div>
+        </div>
+      </div>
+      <div class="vis-body">
+        <div class="chart-h"><canvas id="channelChart"></canvas></div>
+        <div class="insight">
+          <h4>App channel has lowest return rate (19.4%)</h4>
+          <p>App purchasers engage more with size guides and reviews. Migrating web customers to app funnel projected to reduce blended return rate by 2.1pp.</p>
+        </div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-hdr">
+        <div class="vis-hdr-l">
+          <div class="vis-title">Refund Cost Waterfall — FY 2024</div>
+          <div class="vis-sub">Breakdown of £6.8M total refund cost by cost driver</div>
+        </div>
+      </div>
+      <div class="vis-body">
+        <div class="chart-h"><canvas id="waterfallChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-strip">
+  <div>
+    <p>Case Study 10 / 11 · E-commerce Returns & Refund Optimisation · UK Fashion Retailer · FY 2024</p>
+    <p style="margin-top:3px">Tools: SQL (Azure Synapse) · Python (anomaly detection) · Power BI Desktop · Azure Data Factory · Excel</p>
+  </div>
+  <div class="footer-nav">
+    <a href="09_healthcare_analytics.html">← Healthcare</a>
+    <a href="11_esg_sustainability_analytics.html">ESG Analytics →</a>
+  </div>
+</div>
+
+<script>
+const BLUE='#0078d4',RED='#d83b01',GREEN='#107c10',AMBER='#ffb900',PURPLE='#5c2d91',
+      TEAL='#00b4d8',NAVY='#004578',MUTED='#a19f9d',BG='#f3f2f1';
+const sans={family:'IBM Plex Sans',size:11};
+const mono={family:'IBM Plex Mono',size:10};
+
+Chart.defaults.font=sans;
+Chart.defaults.color='#605e5c';
+
+function spark(id,data,color){
+  new Chart(document.getElementById(id),{
+    type:'line',
+    data:{labels:data.map((_,i)=>i),
+      datasets:[{data,borderColor:color,borderWidth:1.5,pointRadius:0,fill:true,
+        backgroundColor:color+'22',tension:.4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:{display:false},y:{display:false}}}
+  });
+}
+
+spark('sp1',[24.1,24.8,25.3,25.6,25.2,26.1,27.4,28.1,29.2,30.1,31.4,34.2],RED);
+spark('sp2',[4.8,5.0,5.1,5.2,5.1,5.3,5.6,5.8,6.1,6.3,6.5,6.8],RED);
+spark('sp3',[34.2,34.8,35.1,35.6,35.9,36.2,36.8,37.1,37.6,38.0,38.2,38.4],GREEN);
+spark('sp4',[68.4,67.2,66.8,65.4,64.8,64.2,63.6,63.1,62.8,62.4,62.2,62.1],AMBER);
+spark('sp5',[2.4,2.5,2.6,2.7,2.8,3.0,3.1,3.2,3.4,3.5,3.7,3.8],PURPLE);
+
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const returnRates=[24.1,24.8,25.3,25.6,25.2,26.1,27.4,28.1,29.2,30.1,31.4,34.2];
+const netRev=[2.8,2.9,3.1,3.3,3.5,3.2,3.4,3.6,3.8,3.7,3.9,4.2];
+const benchmark=Array(12).fill(24);
+
+new Chart(document.getElementById('trendChart'),{
+  type:'bar',
+  data:{labels:months,datasets:[
+    {label:'Net Revenue £M',data:netRev,backgroundColor:BLUE+'55',borderColor:BLUE,borderWidth:1,yAxisID:'y',order:2},
+    {label:'Return Rate %',data:returnRates,type:'line',borderColor:RED,borderWidth:2,pointRadius:3,pointBackgroundColor:RED,fill:false,tension:.3,yAxisID:'y1',order:1},
+    {label:'Benchmark 24%',data:benchmark,type:'line',borderColor:AMBER,borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,yAxisID:'y1',order:0},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:sans}}},
+    scales:{
+      y:{position:'left',title:{display:true,text:'Net Revenue (£M)',font:sans},grid:{color:'#edebe9'}},
+      y1:{position:'right',title:{display:true,text:'Return Rate (%)',font:sans},min:18,max:40,grid:{display:false}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+const catData={
+  labels:['Dresses','Knitwear','Trousers','Footwear','Outerwear','Accessories','Swimwear','Activewear'],
+  rates:[38.2,34.6,31.4,29.8,22.1,14.3,41.2,18.4],
+  costs:[1840,980,760,640,480,210,520,340],
+};
+new Chart(document.getElementById('catChart'),{
+  type:'scatter',
+  data:{datasets:[{
+    label:'Category',
+    data:catData.labels.map((l,i)=>({x:catData.rates[i],y:catData.costs[i],r:Math.sqrt(catData.costs[i])/4})),
+    backgroundColor:[RED,PURPLE,BLUE,TEAL,GREEN,MUTED,RED+'cc',GREEN+'aa'].map(c=>c+'bb'),
+    borderColor:[RED,PURPLE,BLUE,TEAL,GREEN,MUTED,RED,GREEN],
+    borderWidth:1.5,
+    pointRadius:catData.labels.map((l,i)=>Math.sqrt(catData.costs[i])/4),
+    pointHoverRadius:catData.labels.map((l,i)=>Math.sqrt(catData.costs[i])/4+2),
+  }]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:o=>{
+        const i=o.dataIndex;
+        return[catData.labels[i],`Return Rate: ${catData.rates[i]}%`,`Refund Cost: £${catData.costs[i]}K`];
+      }}}
+    },
+    scales:{
+      x:{title:{display:true,text:'Return Rate (%)',font:sans},min:10,max:46,grid:{color:'#edebe9'}},
+      y:{title:{display:true,text:'Refund Cost (£K)',font:sans},grid:{color:'#edebe9'}}
+    }
+  }
+});
+
+const reasons=['Wrong size / fit','Changed mind','Item not as described','Quality issue','Wrong item sent','Duplicate order','Gift / unwanted','Suspected fraud'];
+const reasonPcts=[31.4,20.6,14.8,12.2,8.4,4.8,4.2,3.6];
+const rColors=[RED,AMBER,PURPLE,BLUE,TEAL,GREEN,MUTED,'#e3008c'];
+new Chart(document.getElementById('reasonChart'),{
+  type:'doughnut',
+  data:{labels:reasons,datasets:[{data:reasonPcts,backgroundColor:rColors.map(c=>c+'cc'),borderColor:rColors,borderWidth:1.5}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+    plugins:{legend:{position:'right',labels:{boxWidth:10,font:{family:'IBM Plex Sans',size:10},padding:6}}}}
+});
+
+const fraudLabels=['Normal (<40% return rate)','Monitor (40–60%)','High Risk (>60%)'];
+const fraudData=[52840,4810,2140];
+const fraudColors=[GREEN+'cc',AMBER+'cc',RED+'cc'];
+new Chart(document.getElementById('fraudChart'),{
+  type:'bar',
+  data:{labels:fraudLabels,datasets:[{label:'Accounts',data:fraudData,backgroundColor:fraudColors,borderColor:[GREEN,AMBER,RED],borderWidth:1.5,borderRadius:2}]},
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:'#edebe9'},ticks:{callback:v=>v.toLocaleString()}},y:{grid:{display:false}}}
+  }
+});
+
+const channels=['DTC Web','App','Wholesale B2B','Marketplace (Amazon)','Physical Retail'];
+const channelRates=[31.2,19.4,24.8,33.6,12.1];
+const cColors=[BLUE,GREEN,TEAL,PURPLE,AMBER];
+new Chart(document.getElementById('channelChart'),{
+  type:'bar',
+  data:{labels:channels,datasets:[
+    {label:'Return Rate %',data:channelRates,backgroundColor:cColors.map(c=>c+'99'),borderColor:cColors,borderWidth:1.5,borderRadius:2},
+    {label:'Benchmark 24%',data:Array(5).fill(24),type:'line',borderColor:RED,borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:sans}}},
+    scales:{y:{min:0,max:40,grid:{color:'#edebe9'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}
+  }
+});
+
+const wfLabels=['Gross Refund','Restocking Fee','Resale Recovery','Write-offs','Processing Cost','Net Refund Loss'];
+const wfData=[6800,-340,-4228,980,620,3832];
+const wfColors=wfData.map(v=>v<0?GREEN+'bb':v===6800?BLUE+'bb':RED+'99');
+new Chart(document.getElementById('waterfallChart'),{
+  type:'bar',
+  data:{labels:wfLabels,datasets:[{label:'£K',data:wfData.map(Math.abs),backgroundColor:wfColors,borderColor:wfColors.map(c=>c.slice(0,7)),borderWidth:1.5,borderRadius:2}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:o=>`£${(wfData[o.dataIndex]/1000).toFixed(1)}M`}}},
+    scales:{y:{grid:{color:'#edebe9'},ticks:{callback:v=>'£'+v+'K'}},x:{grid:{display:false}}}
+  }
+});
+
+const funnelData=[
+  {label:'Total Returns',n:80832,pct:100,color:NAVY},
+  {label:'Restocked A-grade',n:50196,pct:62.1,color:GREEN},
+  {label:'Discounted B-grade',n:12533,pct:15.5,color:TEAL},
+  {label:'Donated / recycled',n:3716,pct:4.6,color:AMBER},
+  {label:'Written off',n:14187,pct:17.6,color:RED},
+];
+const fv=document.getElementById('funnelVis');
+funnelData.forEach(d=>{
+  fv.innerHTML+=`<div class="fn-row">
+    <div class="fn-label">${d.label}</div>
+    <div class="fn-track"><div class="fn-fill" style="width:0%;background:${d.color}" data-w="${d.pct}">
+      ${d.pct}%
+    </div></div>
+    <div class="fn-n">${(d.n/1000).toFixed(1)}K</div>
+  </div>`;
+});
+
+const skus=[
+  {sku:'PRD-4821',name:'Wrap Midi Dress — Floral',cat:'Dresses',sold:1840,returned:872,cost:'£52.4K',reason:'Wrong size',rag:'r'},
+  {sku:'PRD-2341',name:'Oversized Knit Jumper',cat:'Knitwear',sold:2140,returned:852,cost:'£42.6K',reason:'Not as described',rag:'r'},
+  {sku:'PRD-7782',name:'Sequin Evening Gown',cat:'Occasionwear',sold:680,returned:340,cost:'£68.0K',reason:'Changed mind',rag:'r'},
+  {sku:'PRD-3310',name:'Wide Leg Trousers',cat:'Trousers',sold:3200,returned:1152,cost:'£34.6K',reason:'Wrong size',rag:'r'},
+  {sku:'PRD-9014',name:'Strappy Heeled Sandal',cat:'Footwear',sold:1420,returned:511,cost:'£35.8K',reason:'Sizing runs small',rag:'r'},
+  {sku:'PRD-5521',name:'Puffer Jacket — Olive',cat:'Outerwear',sold:2800,returned:672,cost:'£28.1K',reason:'Quality issue',rag:'a'},
+  {sku:'PRD-1180',name:'High Waist Bikini Set',cat:'Swimwear',sold:1640,returned:672,cost:'£24.2K',reason:'Fit / sizing',rag:'a'},
+  {sku:'PRD-6643',name:'Longline Blazer',cat:'Tailoring',sold:980,returned:294,cost:'£20.6K',reason:'Not as described',rag:'a'},
+  {sku:'PRD-8820',name:'Cotton Cargo Shorts',cat:'Trousers',sold:4200,returned:840,cost:'£16.8K',reason:'Wrong size',rag:'g'},
+  {sku:'PRD-2019',name:'Sports Bra — Ribbed',cat:'Activewear',sold:3600,returned:540,cost:'£10.8K',reason:'Sizing',rag:'g'},
+];
+const tb=document.getElementById('skuTbody');
+skus.forEach(s=>{
+  const rate=((s.returned/s.sold)*100).toFixed(1);
+  const ragLabel=s.rag==='r'?'Above benchmark':s.rag==='a'?'Watch':'Within range';
+  tb.innerHTML+=`<tr>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${s.sku}</td>
+    <td style="font-weight:500">${s.name}</td>
+    <td>${s.cat}</td>
+    <td style="text-align:right;font-family:var(--mono)">${s.sold.toLocaleString()}</td>
+    <td style="text-align:right;font-family:var(--mono)">${s.returned.toLocaleString()}</td>
+    <td>
+      <div class="rate-bar">
+        <div class="rate-track">
+          <div class="rate-fill" style="width:${rate}%;background:${s.rag==='r'?RED:s.rag==='a'?AMBER:GREEN}"></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;font-weight:600">${rate}%</span>
+      </div>
+    </td>
+    <td style="font-weight:600;color:var(--navy)">${s.cost}</td>
+    <td style="color:var(--muted)">${s.reason}</td>
+    <td><span class="rag rag-${s.rag}"></span>${ragLabel}</td>
+  </tr>`;
+});
+
+setTimeout(()=>{
+  document.querySelectorAll('.fn-fill').forEach(el=>el.style.width=el.dataset.w+'%');
+},300);
+</script>
+</body>
+</html>

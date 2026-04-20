@@ -11,7 +11,7 @@ PROFILE = {
     "subtitle": "BI · SQL · Python · Power BI",
     "email": "syedaihzaidi@gmail.com",
     "phone": "+92 332 8211131",
-    "linkedin": "linkedin": "linkedin.com/in/syedaihzaidi",
+    "linkedin": "linkedin.com/in/syedasadzaidi",
     "education": "MSc Business Intelligence & Analytics — University of Huddersfield, UK",
     "bio": [
         "Senior Data Analyst with 5 years turning complex datasets into actionable "
@@ -251,6 +251,44 @@ DASHBOARDS = [
             {"val": "130%",  "label": "NRR",       "color": "#818cf8"},
         ],
         "tag_style": "background:#eef0fe;color:#3730a3",
+    },
+    {
+        "num":      "10",
+        "file":     "10_ecommerce_returns_analytics.html",
+        "category": "Power BI · E-commerce",
+        "title":    "Returns & Refund Loss Optimisation",
+        "desc":     "Power BI dashboard analysing £6.8M in annual refund costs for a UK fashion retailer — return rate by category, SKU-level intervention list, serial-return fraud detection, and disposition funnel. Azure Synapse.",
+        "preview_bg":   "#004578",
+        "stats": [
+            {"val": "28.4%",  "label": "Return rate"},
+            {"val": "£6.8M",  "label": "Gross refund cost"},
+            {"val": "3.8%",   "label": "Fraud flagged"},
+        ],
+        "preview_stats": [
+            {"val": "28.4%", "label": "Return rate", "color": "#d83b01"},
+            {"val": "£6.8M", "label": "Refund cost",  "color": "#ffb900"},
+            {"val": "62.1%", "label": "Recovery",     "color": "#107c10"},
+        ],
+        "tag_style": "background:#deecf9;color:#004578",
+    },
+    {
+        "num":      "11",
+        "file":     "11_esg_sustainability_analytics.html",
+        "category": "Tableau · ESG Analytics",
+        "title":    "Carbon Footprint & Sustainability Reporting",
+        "desc":     "Tableau dashboard tracking Scope 1, 2 & 3 emissions across 8 UK manufacturing sites — reduction vs Net Zero pathway, supplier coverage gaps, energy mix, site RAG status, and Python scenario forecasting to 2030.",
+        "preview_bg":   "#2d6a4f",
+        "stats": [
+            {"val": "48,240",  "label": "tCO₂e total"},
+            {"val": "−31.2%",  "label": "vs 2019 baseline"},
+            {"val": "64.8%",   "label": "Renewable energy"},
+        ],
+        "preview_stats": [
+            {"val": "−31.2%", "label": "Reduction",  "color": "#52b788"},
+            {"val": "64.8%",  "label": "Renewables",  "color": "#e9c46a"},
+            {"val": "2040",   "label": "Net Zero",     "color": "#52b788"},
+        ],
+        "tag_style": "background:#d1fae5;color:#065f46",
     },
     {
         "num":      "09",

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESG & Carbon Analytics · Sustainability Reporting Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sand:#f5f4ef;--cream:#fdfcf8;--warm:#eae7de;
+  --forest:#2d6a4f;--forest2:#40916c;--moss:#52b788;
+  --teal:#1b6ca8;--sky:#4a9eca;--amber:#e9c46a;--terra:#e76f51;
+  --slate:#2b3a4a;--charcoal:#3d4f5c;
+  --border:#d8d4c8;--border2:#c4bfb0;
+  --ink:#1a1c18;--muted:#6b7280;
+  --font-d:'Libre Baskerville',Georgia,serif;
+  --font-b:'Source Sans 3',system-ui,sans-serif;
+  --mono:'Source Code Pro',monospace;
+}
+body{background:var(--sand);color:var(--ink);font-family:var(--font-b);font-size:13px;min-height:100vh}
+
+/* TABLEAU HEADER */
+.hdr{background:var(--slate);display:grid;grid-template-columns:auto 1fr auto;align-items:stretch;border-bottom:3px solid var(--forest2)}
+.hdr-brand{padding:16px 24px;background:var(--forest);display:flex;align-items:center;gap:10px}
+.hdr-brand-icon{width:32px;height:32px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px}
+.hdr-brand-text{color:white;font-weight:700;font-size:14px;letter-spacing:-.3px}
+.hdr-brand-sub{color:rgba(255,255,255,.7);font-size:10px;margin-top:1px}
+.hdr-title{padding:14px 24px;display:flex;flex-direction:column;justify-content:center}
+.hdr-title h1{font-family:var(--font-d);font-size:18px;color:white;font-weight:700;letter-spacing:-.3px}
+.hdr-title p{font-size:11px;color:rgba(255,255,255,.5);margin-top:4px}
+.hdr-meta{padding:12px 22px;display:flex;flex-direction:column;gap:5px;justify-content:center;border-left:1px solid rgba(255,255,255,.1)}
+.hdr-meta-item{font-size:10px;color:rgba(255,255,255,.45);display:flex;gap:6px;align-items:center}
+.hdr-meta-item strong{color:rgba(255,255,255,.85)}
+
+/* TABS */
+.tabs{background:var(--cream);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0}
+.tab{padding:10px 18px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:color .15s,border-color .15s}
+.tab.active{color:var(--forest);border-bottom-color:var(--forest)}
+
+/* FILTER BAR */
+.fbar{background:var(--warm);border-bottom:1px solid var(--border);padding:8px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fl{font-size:11px;color:var(--muted);font-weight:600}
+.fc{border:1px solid var(--border2);background:var(--cream);padding:4px 11px;border-radius:3px;font-size:11px;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:5px}
+.fc.active{border-color:var(--forest);background:rgba(64,145,108,.08);color:var(--forest);font-weight:600}
+
+/* PAGE */
+.page{max-width:1380px;margin:0 auto;padding:18px 24px;display:flex;flex-direction:column;gap:14px}
+
+/* SCORECARD STRIP */
+.sc-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.sc{background:var(--cream);border:1px solid var(--border);padding:16px 18px;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.sc.forest::before{background:var(--forest)}
+.sc.moss::before{background:var(--moss)}
+.sc.teal::before{background:var(--teal)}
+.sc.amber::before{background:var(--amber)}
+.sc.terra::before{background:var(--terra)}
+.sc-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:8px}
+.sc-val{font-size:26px;font-weight:700;color:var(--slate);line-height:1;font-variant-numeric:tabular-nums;font-family:var(--font-d)}
+.sc-unit{font-size:13px;font-weight:400;color:var(--muted);margin-left:3px}
+.sc-delta{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:600}
+.sc-delta.good{color:var(--forest)}.sc-delta.bad{color:var(--terra)}.sc-delta.neutral{color:var(--muted)}
+.sc-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* SECTION HEADER — Tableau style */
+.sh{display:flex;align-items:center;gap:0;margin-bottom:12px}
+.sh-accent{width:4px;background:var(--forest2);align-self:stretch;margin-right:12px;border-radius:2px}
+.sh-title{font-family:var(--font-d);font-size:14px;font-weight:700;font-style:italic;color:var(--slate)}
+.sh-sub{font-size:11px;color:var(--muted);margin-left:10px}
+
+/* CARDS */
+.card{background:var(--cream);border:1px solid var(--border);overflow:hidden}
+.card-hd{padding:11px 16px;border-bottom:1px solid var(--border);background:var(--warm);display:flex;justify-content:space-between;align-items:center}
+.card-title{font-size:12px;font-weight:700;color:var(--slate);letter-spacing:-.1px}
+.card-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.card-pill{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:.3px}
+.pill-g{background:#d1fae5;color:#065f46}.pill-r{background:#fee2e2;color:#991b1b}
+.pill-a{background:#fef3c7;color:#92400e}.pill-b{background:#dbeafe;color:#1e40af}
+.card-body{padding:14px}
+.chart-h{height:200px;position:relative}
+.chart-h.tall{height:265px}
+.chart-h.sm{height:150px}
+.chart-h.xs{height:120px}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g31{display:grid;grid-template-columns:3fr 1fr;gap:14px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+
+/* INSIGHT */
+.insight{border-left:3px solid var(--forest2);background:rgba(64,145,108,.06);padding:10px 14px;margin-top:12px}
+.insight h4{font-size:12px;font-weight:700;color:var(--slate);margin-bottom:3px}
+.insight p{font-size:11px;color:var(--muted);line-height:1.65}
+.insight.warn{border-left-color:var(--terra);background:rgba(231,111,81,.05)}
+.insight.info{border-left-color:var(--teal);background:rgba(27,108,168,.05)}
+
+/* SCOPE BARS */
+.scope-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.scope-row{display:flex;align-items:center;gap:10px}
+.scope-lbl{font-size:11px;color:var(--muted);width:72px;flex-shrink:0;font-weight:600}
+.scope-track{flex:1;height:22px;background:var(--sand);border-radius:2px;overflow:hidden}
+.scope-fill{height:100%;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:white;transition:width 1.1s ease}
+.scope-n{font-size:11px;font-weight:600;color:var(--slate);width:70px;text-align:right;font-family:var(--mono)}
+
+/* TARGET GAUGE */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:10px 0}
+.gauge-num{font-family:var(--font-d);font-size:48px;font-weight:700;color:var(--forest);line-height:1}
+.gauge-unit{font-size:14px;color:var(--muted)}
+.gauge-label{font-size:12px;color:var(--muted);margin-top:4px}
+.gauge-target{font-size:11px;color:var(--terra);font-weight:600;margin-top:4px}
+.progress-ring{margin:14px 0 8px}
+
+/* SITE TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:7px 10px;border-bottom:2px solid var(--border);background:var(--warm)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:hover td{background:rgba(64,145,108,.04)}
+.trend-spark{display:inline-block;width:60px;height:22px;vertical-align:middle}
+.rag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.rag-g{background:#d1fae5;color:#065f46}.rag-a{background:#fef3c7;color:#92400e}.rag-r{background:#fee2e2;color:#991b1b}
+
+/* PYTHON BLOCK */
+.py-block{background:#1e1e2e;border-radius:0;padding:16px;font-family:var(--mono);font-size:11px;line-height:1.75;overflow-x:auto}
+.pk{color:#cba6f7}.pf{color:#89b4fa}.ps{color:#a6e3a1}.pn{color:#fab387}.pc{color:#6c7086;font-style:italic}.po{color:#89dceb}
+
+/* FOOTER */
+.footer-strip{background:var(--slate);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.footer-strip p{font-size:10px;color:rgba(255,255,255,.35)}
+.fnav{display:flex;gap:8px}
+.fnav a{font-size:11px;color:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.15);padding:5px 14px;border-radius:2px;transition:border-color .15s}
+.fnav a:hover{border-color:rgba(255,255,255,.5);color:white}
+
+/* RENEWABLE DONUT LEGEND */
+.legend-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-brand-icon">🌿</div>
+    <div>
+      <div class="hdr-brand-text">Tableau</div>
+      <div class="hdr-brand-sub">Desktop</div>
+    </div>
+  </div>
+  <div class="hdr-title">
+    <h1>ESG & Carbon Footprint Intelligence</h1>
+    <p>UK Manufacturing Group · 8 production sites · FY 2024 · Scope 1, 2 & 3 emissions · Net Zero target: 2040</p>
+  </div>
+  <div class="hdr-meta">
+    <div class="hdr-meta-item">Case Study <strong>11 / 11</strong></div>
+    <div class="hdr-meta-item">Tools: <strong>SQL · Python · Tableau · Excel · GHG Protocol</strong></div>
+    <div class="hdr-meta-item">Data: <strong>ENERGY / HESA / Supplier declarations / DEFRA factors</strong></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active">Executive Summary</div>
+  <div class="tab">Scope Breakdown</div>
+  <div class="tab">Site Performance</div>
+  <div class="tab">Forecast & Targets</div>
+</div>
+
+<div class="fbar">
+  <span class="fl">Filters:</span>
+  <div class="fc active">FY 2024 ▾</div>
+  <div class="fc active">All 8 Sites ▾</div>
+  <div class="fc active">All Scopes ▾</div>
+  <div class="fc">Business Unit ▾</div>
+  <div class="fc">Emission Category ▾</div>
+  <span style="margin-left:auto;font-size:10px;color:var(--muted)">Last verified: Q4 2024 · GHG Protocol aligned · DEFRA 2024 conversion factors applied</span>
+</div>
+
+<div class="page">
+
+  <!-- KPI STRIP -->
+  <div class="sc-strip">
+    <div class="sc forest">
+      <div class="sc-lbl">Total Emissions</div>
+      <div class="sc-val">48,240<span class="sc-unit">tCO₂e</span></div>
+      <div class="sc-delta good">▼ −12.4% vs FY23 baseline</div>
+      <div class="sc-sub">Net Zero target: 2040</div>
+    </div>
+    <div class="sc moss">
+      <div class="sc-lbl">Reduction vs 2019 Baseline</div>
+      <div class="sc-val">−31.2<span class="sc-unit">%</span></div>
+      <div class="sc-delta good">▲ On track for 2030 target (−40%)</div>
+      <div class="sc-sub">2030 milestone: −40%</div>
+    </div>
+    <div class="sc teal">
+      <div class="sc-lbl">Renewable Energy Share</div>
+      <div class="sc-val">64.8<span class="sc-unit">%</span></div>
+      <div class="sc-delta good">▲ +8.2pp vs FY23</div>
+      <div class="sc-sub">Target FY25: 75%</div>
+    </div>
+    <div class="sc amber">
+      <div class="sc-lbl">Carbon Intensity</div>
+      <div class="sc-val">18.4<span class="sc-unit">tCO₂e/£M</span></div>
+      <div class="sc-delta good">▼ −14.8% vs FY23</div>
+      <div class="sc-sub">Revenue-normalised</div>
+    </div>
+    <div class="sc terra">
+      <div class="sc-lbl">Scope 3 Coverage</div>
+      <div class="sc-val">68<span class="sc-unit">%</span></div>
+      <div class="sc-delta bad">▲ Gap: 32% suppliers unverified</div>
+      <div class="sc-sub">Target: 90% by FY25</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Emissions trend + Scope breakdown -->
+  <div class="g31">
+    <div class="card">
+      <div class="card-hd">
+        <div>
+          <div class="card-title">Total Emissions vs Reduction Target — FY 2019–2024</div>
+          <div class="card-sub">tCO₂e · Scope 1 + 2 + 3 · Verified against GHG Protocol · Target pathway shown</div>
+        </div>
+        <span class="card-pill pill-g">On track</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-h tall"><canvas id="trendChart"></canvas></div>
+        <div class="insight">
+          <h4>FY 2024 emissions 31.2% below 2019 baseline — ahead of −28% FY24 target</h4>
+          <p>The 3.2pp outperformance vs target is driven by early renewable energy procurement (PPAs signed Q1 FY24) and the closure of Site 6 (Derby), which contributed 4,100 tCO₂e. Scope 3 remains the largest gap — supplier declarations now mandatory for top 50 suppliers from FY25.</p>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Scope 1 / 2 / 3 Breakdown</div>
+          <div class="card-sub">tCO₂e · FY 2024 · GHG Protocol</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-h sm"><canvas id="scopePieChart"></canvas></div>
+          <div class="scope-list" id="scopeBars"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Progress to 2030 Target</div>
+          <div class="card-sub">−40% vs 2019 baseline by 2030</div>
+        </div>
+        <div class="card-body" style="text-align:center;padding:10px 14px">
+          <div class="chart-h xs"><canvas id="gaugeChart"></canvas></div>
+          <div style="font-family:var(--font-d);font-size:22px;font-weight:700;color:var(--forest)">31.2%</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">of 40% target achieved</div>
+          <div style="font-size:11px;color:var(--terra);font-weight:600;margin-top:4px">8.8pp gap · 6 years remaining</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Site performance table -->
+  <div class="card">
+    <div class="card-hd">
+      <div>
+        <div class="card-title">Emissions Performance by Site — FY 2024</div>
+        <div class="card-sub">All 8 production sites · tCO₂e · Intensity = tCO₂e per £M revenue · RAG vs site reduction target</div>
+      </div>
+      <span class="card-pill pill-r">3 sites off-target</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Site</th><th>Location</th><th>Scope 1</th><th>Scope 2</th>
+            <th>Scope 3 (partial)</th><th>Total tCO₂e</th>
+            <th>vs FY23</th><th>Intensity</th><th>Renewables %</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="siteTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ROW 3: Emission categories + Energy mix -->
+  <div class="g2">
+    <div class="card">
+      <div class="card-hd">
+        <div>
+          <div class="card-title">Scope 3 Emission Categories — Hotspot Analysis</div>
+          <div class="card-sub">Upstream + downstream · tCO₂e · 15 categories tracked · FY 2024</div>
+        </div>
+        <span class="card-pill pill-a">Purchased goods = 58% of Scope 3</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-h tall"><canvas id="scope3Chart"></canvas></div>
+        <div class="insight warn">
+          <h4>Purchased goods & services (Scope 3.1) is the largest single emission source</h4>
+          <p>At 16,840 tCO₂e, it represents 34.9% of total emissions. Only 68% of suppliers have submitted verified carbon data. Mandatory supplier questionnaires and science-based targets alignment required for top 50 suppliers by FY25 procurement cycle.</p>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Energy Mix — All Sites</div>
+          <div class="card-sub">MWh consumed by source · FY 2024</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-h sm"><canvas id="energyChart"></canvas></div>
+          <div class="legend-list" id="energyLegend"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Carbon Intensity by Product Line</div>
+          <div class="card-sub">tCO₂e per £M revenue · FY 2024</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-h sm"><canvas id="intensityChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Python forecast + Recommendations -->
+  <div class="g2">
+    <div class="card">
+      <div class="card-hd">
+        <div>
+          <div class="card-title">Python — Emissions Forecast to 2030</div>
+          <div class="card-sub">Linear regression + policy scenario modelling · scikit-learn · pandas</div>
+        </div>
+        <span class="card-pill pill-b">scikit-learn · pandas</span>
+      </div>
+      <div class="card-body" style="padding:0">
+<div class="py-block"><span class="pc"># Emissions forecast model — 3 scenarios to 2030</span>
+<span class="pc"># Scope: Scope 1+2 (verified) · FY2019–FY2024 actuals</span>
+
+<span class="pk">import</span> pandas <span class="pk">as</span> pd
+<span class="pk">import</span> numpy <span class="pk">as</span> np
+<span class="pk">from</span> sklearn.linear_model <span class="pk">import</span> LinearRegression
+<span class="pk">from</span> sklearn.preprocessing <span class="pk">import</span> PolynomialFeatures
+
+<span class="pc"># ── Load and prepare actuals ──────────────────────────────────────</span>
+df = pd.read_csv(<span class="ps">'ghg_actuals_2019_2024.csv'</span>)
+df[<span class="ps">'year_idx'</span>] = df[<span class="ps">'year'</span>] - <span class="pn">2019</span>
+
+X = df[[<span class="ps">'year_idx'</span>]].values
+y = df[<span class="ps">'total_tco2e'</span>].values
+
+<span class="pc"># ── Fit polynomial regression (degree 2) ─────────────────────────</span>
+poly = PolynomialFeatures(degree=<span class="pn">2</span>, include_bias=<span class="pk">False</span>)
+X_poly = poly.fit_transform(X)
+model = LinearRegression().fit(X_poly, y)
+
+<span class="pc"># ── Forecast years 2025–2030 ─────────────────────────────────────</span>
+future_years = np.arange(<span class="pn">2025</span>, <span class="pn">2031</span>)
+X_future = poly.transform((future_years - <span class="pn">2019</span>).reshape(<span class="pn">-1</span>, <span class="pn">1</span>))
+baseline_forecast = model.predict(X_future)
+
+<span class="pc"># ── Policy scenarios ─────────────────────────────────────────────</span>
+scenarios = {
+    <span class="ps">'BAU'</span>:              baseline_forecast,
+    <span class="ps">'Moderate action'</span>:  baseline_forecast * np.linspace(<span class="pn">1.0</span>, <span class="pn">0.82</span>, <span class="pn">6</span>),
+    <span class="ps">'Accelerated'</span>:      baseline_forecast * np.linspace(<span class="pn">1.0</span>, <span class="pn">0.60</span>, <span class="pn">6</span>),
+}
+
+<span class="pc"># ── Check against Net Zero pathway ───────────────────────────────</span>
+target_2030 = <span class="pn">41490</span> * (<span class="pn">1</span> - <span class="pn">0.40</span>)  <span class="pc"># −40% vs 2019 = 24,894 tCO₂e</span>
+<span class="pf">print</span>(<span class="ps">f"2030 target: {target_2030:,.0f} tCO₂e"</span>)
+
+<span class="pk">for</span> name, values <span class="pk">in</span> scenarios.items():
+    gap = values[<span class="pn">-1</span>] - target_2030
+    status = <span class="ps">'✓ On track'</span> <span class="pk">if</span> gap <= <span class="pn">0</span> <span class="pk">else</span> <span class="ps">f'⚠ Gap: {gap:,.0f} tCO₂e'</span>
+    <span class="pf">print</span>(<span class="ps">f"{name}: {values[-1]:,.0f} tCO₂e → {status}"</span>)
+</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div>
+          <div class="card-title">Emissions Forecast — 3 Scenarios to 2030</div>
+          <div class="card-sub">tCO₂e · BAU vs Moderate vs Accelerated decarbonisation</div>
+        </div>
+        <span class="card-pill pill-g">Accelerated scenario meets 2030 target</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-h tall"><canvas id="forecastChart"></canvas></div>
+        <div class="insight info">
+          <h4>Accelerated scenario closes the gap — requires 3 key interventions</h4>
+          <p><strong>1.</strong> Full renewable electricity procurement across all sites by FY26 (est. −6,200 tCO₂e). <strong>2.</strong> Fleet electrification: 80% EV by FY27 (est. −2,800 tCO₂e). <strong>3.</strong> Supplier engagement programme driving Scope 3.1 reduction of 15% (est. −2,520 tCO₂e). Combined: −11,520 tCO₂e, closing the projected 8.8pp gap.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-strip">
+  <div>
+    <p>Case Study 11 / 11 · ESG & Carbon Analytics · UK Manufacturing Group · 8 Sites · FY 2024</p>
+    <p style="margin-top:3px">Tools: SQL (Snowflake) · Python (scikit-learn, pandas) · Tableau Desktop · Excel · DEFRA 2024 conversion factors · GHG Protocol</p>
+  </div>
+  <div class="fnav">
+    <a href="10_ecommerce_returns_analytics.html">← Returns Analytics</a>
+    <a href="01_marketing_analytics.html">↑ Back to start</a>
+  </div>
+</div>
+
+<script>
+const FOREST='#2d6a4f',MOSS='#52b788',TEAL='#1b6ca8',SKY='#4a9eca',
+      AMBER='#e9c46a',TERRA='#e76f51',SLATE='#2b3a4a',MUTED='#9ca3af',
+      SAND='#f5f4ef',WARM='#eae7de';
+Chart.defaults.font={family:'Source Sans 3',size:11};
+Chart.defaults.color='#6b7280';
+
+const years=['FY19','FY20','FY21','FY22','FY23','FY24'];
+const actuals=[41490,39820,38140,36800,55080,48240];
+const target=[41490,38572,35655,32737,29820,null,null,null,null,null,null,null];
+const targetFull=[41490,38572,35655,32737,29820,26902,24894];
+const targetYears=['FY19','FY20','FY21','FY22','FY23','FY24','FY25','FY26','FY27','FY28','FY29','FY30'];
+
+new Chart(document.getElementById('trendChart'),{
+  type:'bar',
+  data:{labels:years,datasets:[
+    {label:'Scope 1 (Direct)',data:[8420,7980,7640,7280,6820,6140],backgroundColor:TERRA+'bb',stack:'s'},
+    {label:'Scope 2 (Electricity)',data:[12840,11920,10840,9680,8240,6580],backgroundColor:AMBER+'bb',stack:'s'},
+    {label:'Scope 3 (Value chain)',data:[20230,19920,19660,19840,19020,20520],backgroundColor:TEAL+'88',stack:'s'},
+    {label:'Reduction target pathway',data:target.slice(0,6),type:'line',borderColor:FOREST,borderWidth:2,borderDash:[6,3],pointRadius:4,pointBackgroundColor:FOREST,fill:false,tension:.2},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}},
+    scales:{
+      x:{grid:{display:false}},
+      y:{stacked:true,grid:{color:'#e5e7eb'},title:{display:true,text:'tCO₂e'},ticks:{callback:v=>(v/1000).toFixed(0)+'K'}}
+    }
+  }
+});
+
+const scopeData=[6140,6580,35520];
+const scopeColors=[TERRA,AMBER,TEAL];
+const scopeLabels=['Scope 1 — Direct','Scope 2 — Purchased energy','Scope 3 — Value chain'];
+new Chart(document.getElementById('scopePieChart'),{
+  type:'doughnut',
+  data:{labels:scopeLabels,datasets:[{data:scopeData,backgroundColor:scopeColors.map(c=>c+'cc'),borderColor:scopeColors,borderWidth:1.5}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+    plugins:{legend:{display:false}}}
+});
+const sb=document.getElementById('scopeBars');
+const total=scopeData.reduce((a,b)=>a+b,0);
+[['Scope 1',scopeData[0],TERRA],['Scope 2',scopeData[1],AMBER],['Scope 3',scopeData[2],TEAL]].forEach(([l,v,c])=>{
+  const pct=(v/total*100).toFixed(1);
+  sb.innerHTML+=`<div class="scope-row">
+    <div class="scope-lbl">${l}</div>
+    <div class="scope-track"><div class="scope-fill" style="width:0%;background:${c}" data-w="${pct}">${pct}%</div></div>
+    <div class="scope-n">${(v/1000).toFixed(1)}K</div>
+  </div>`;
+});
+
+new Chart(document.getElementById('gaugeChart'),{
+  type:'doughnut',
+  data:{datasets:[{data:[31.2,8.8,60],backgroundColor:[FOREST+'dd',TERRA+'88','#e5e7eb'],borderWidth:0}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'70%',circumference:180,rotation:-90,
+    plugins:{legend:{display:false},tooltip:{enabled:false}}}
+});
+
+const s3cats=['Purchased goods & svcs','Business travel','Employee commuting','Waste in operations','Upstream transport','Capital goods','Fuel & energy (upstream)','End-of-life treatment','Downstream transport'];
+const s3vals=[16840,2840,2620,1980,1840,1540,1420,1320,1120];
+const s3colors=s3cats.map((_,i)=>[TEAL,SKY,MOSS,FOREST,AMBER,TERRA,MUTED,'#8b5cf6','#ec4899'][i]+'cc');
+new Chart(document.getElementById('scope3Chart'),{
+  type:'bar',
+  data:{labels:s3cats,datasets:[{label:'tCO₂e',data:s3vals,backgroundColor:s3colors,borderRadius:2}]},
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:'#e5e7eb'},ticks:{callback:v=>(v/1000).toFixed(1)+'K'}},y:{grid:{display:false},ticks:{font:{size:10}}}}
+  }
+});
+
+const energySources=['Wind PPA','Solar (on-site)','Grid (renewable tariff)','Natural gas','Diesel / HVO','Biomass'];
+const energyVals=[28400,9800,14200,16400,7600,3200];
+const eColors=[SKY,AMBER,MOSS,TERRA,MUTED,FOREST];
+new Chart(document.getElementById('energyChart'),{
+  type:'doughnut',
+  data:{labels:energySources,datasets:[{data:energyVals,backgroundColor:eColors.map(c=>c+'cc'),borderColor:eColors,borderWidth:1.5}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'50%',
+    plugins:{legend:{display:false}}}
+});
+const el=document.getElementById('energyLegend');
+energySources.forEach((s,i)=>{
+  const pct=(energyVals[i]/energyVals.reduce((a,b)=>a+b,0)*100).toFixed(1);
+  el.innerHTML+=`<div class="legend-item"><div class="legend-dot" style="background:${eColors[i]}"></div>${s} — <strong>${pct}%</strong></div>`;
+});
+
+const productLines=['Heavy Components','Precision Parts','Packaging','Assembly','Logistics'];
+const intensities=[28.4,22.6,18.4,14.2,12.8];
+new Chart(document.getElementById('intensityChart'),{
+  type:'bar',
+  data:{labels:productLines,datasets:[
+    {label:'tCO₂e / £M',data:intensities,backgroundColor:intensities.map(v=>v>24?TERRA+'bb':v>18?AMBER+'bb':MOSS+'bb'),borderRadius:2},
+    {label:'Group average',data:Array(5).fill(18.4),type:'line',borderColor:FOREST,borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:10}}}},
+    scales:{y:{grid:{color:'#e5e7eb'}},x:{grid:{display:false},ticks:{font:{size:10}}}}
+  }
+});
+
+const fyAll=['FY19','FY20','FY21','FY22','FY23','FY24','FY25','FY26','FY27','FY28','FY29','FY30'];
+const actualsAll=[41490,39820,38140,36800,55080,48240,null,null,null,null,null,null];
+const bau=[null,null,null,null,null,48240,49800,51200,52400,53100,53600,54000];
+const moderate=[null,null,null,null,null,48240,45800,42600,38400,34200,30100,27200];
+const accelerated=[null,null,null,null,null,48240,43200,37800,32400,28200,26400,24200];
+const targetLine=[41490,38572,35655,32737,29820,26902,24894,null,null,null,null,null];
+new Chart(document.getElementById('forecastChart'),{
+  type:'line',
+  data:{labels:fyAll,datasets:[
+    {label:'Actuals',data:actualsAll,borderColor:SLATE,borderWidth:2.5,pointRadius:4,pointBackgroundColor:SLATE,fill:false,tension:.2},
+    {label:'BAU (no action)',data:bau,borderColor:TERRA,borderWidth:1.5,borderDash:[5,4],pointRadius:2,fill:false,tension:.2},
+    {label:'Moderate action',data:moderate,borderColor:AMBER,borderWidth:2,borderDash:[4,3],pointRadius:2,fill:false,tension:.3},
+    {label:'Accelerated',data:accelerated,borderColor:FOREST,borderWidth:2.5,pointRadius:2,fill:false,tension:.3},
+    {label:'2030 target pathway',data:targetLine,borderColor:MOSS,borderWidth:1.5,borderDash:[2,2],pointRadius:0,fill:false,tension:.2},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}},
+    scales:{
+      y:{grid:{color:'#e5e7eb'},title:{display:true,text:'tCO₂e'},ticks:{callback:v=>(v/1000).toFixed(0)+'K'}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+const sites=[
+  {name:'Manchester (HQ)',loc:'Manchester',s1:1240,s2:980,s3:4820,total:7040,change:-18.4,intensity:14.2,renew:82,rag:'g'},
+  {name:'Birmingham',loc:'Birmingham',s1:980,s2:840,s3:3640,total:5460,change:-14.2,intensity:16.8,renew:74,rag:'g'},
+  {name:'Leeds',loc:'Leeds',s1:1140,s2:1020,s3:4280,total:6440,change:-11.6,intensity:19.4,renew:68,rag:'g'},
+  {name:'Bristol',loc:'Bristol',s1:820,s2:640,s3:3120,total:4580,change:-8.4,intensity:22.1,renew:58,rag:'a'},
+  {name:'Glasgow',loc:'Glasgow',s1:940,s2:820,s3:3840,total:5600,change:-6.2,intensity:24.8,renew:52,rag:'a'},
+  {name:'Nottingham',loc:'Nottingham',s1:720,s2:480,s3:2640,total:3840,change:+2.4,intensity:28.4,renew:41,rag:'r'},
+  {name:'Cardiff',loc:'Cardiff',s1:840,s2:680,s3:3080,total:4600,change:+1.8,intensity:26.2,renew:44,rag:'r'},
+  {name:'Newcastle',loc:'Newcastle',s1:600,s2:520,s3:2760,total:3880,change:+3.6,intensity:31.4,renew:38,rag:'r'},
+];
+const stb=document.getElementById('siteTbody');
+sites.forEach(s=>{
+  const ragCls=s.rag==='g'?'rag-g':s.rag==='a'?'rag-a':'rag-r';
+  const ragLabel=s.rag==='g'?'On target':s.rag==='a'?'At risk':'Off target';
+  const chgColor=s.change<0?'color:'+FOREST+';font-weight:600':'color:'+TERRA+';font-weight:600';
+  stb.innerHTML+=`<tr>
+    <td style="font-weight:600">${s.name}</td>
+    <td style="color:var(--muted)">${s.loc}</td>
+    <td style="font-family:var(--mono);font-size:11px;text-align:right">${s.s1.toLocaleString()}</td>
+    <td style="font-family:var(--mono);font-size:11px;text-align:right">${s.s2.toLocaleString()}</td>
+    <td style="font-family:var(--mono);font-size:11px;text-align:right">${s.s3.toLocaleString()}</td>
+    <td style="font-family:var(--mono);font-size:12px;font-weight:700;text-align:right">${s.total.toLocaleString()}</td>
+    <td style="${chgColor};text-align:right">${s.change>0?'+':''}${s.change}%</td>
+    <td style="font-family:var(--mono);font-size:11px;text-align:right">${s.intensity}</td>
+    <td>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="flex:1;height:6px;background:var(--warm);border-radius:3px;overflow:hidden">
+          <div style="width:${s.renew}%;height:100%;background:${s.renew>=70?FOREST:s.renew>=50?AMBER:TERRA};border-radius:3px"></div>
+        </div>
+        <span style="font-size:11px;font-weight:600;width:28px">${s.renew}%</span>
+      </div>
+    </td>
+    <td><span class="rag ${ragCls}">${ragLabel}</span></td>
+  </tr>`;
+});
+
+setTimeout(()=>{
+  document.querySelectorAll('.scope-fill').forEach(el=>el.style.width=el.dataset.w+'%');
+},300);
+</script>
+</body>
+</html>
